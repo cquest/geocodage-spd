@@ -18,7 +18,7 @@ Il est ensuite dénormalisé et simplifié:
 Il est ensuite découpé par départements (colonne DEPET), pour un traitement en parallèle (avec GNU parallel).
 
 Un script python effectue de multiples géocodages pour sélectionner le résultat le plus proche de l'information d'origine.
-Il utilise par défaut la BAN et BANO en second choix si l'adresse n'est pas trouvé ou si le score minimal n'est pas atteint.
+Il utilise par défaut la BAN et BANO en second choix si l'adresse n'est pas trouvée ou si le score minimal n'est pas atteint.
 C'est l'adresse "géographique" qui est utilisée en premier et à défaut l'adresse déclarée (ligne4) ou l'adresse normalisée.
 
 Si l'adresse n'est pas trouvée, les coordonnées du chef lieu de la commune sont utilisées comme longitude/latitude.
