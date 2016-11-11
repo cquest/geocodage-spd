@@ -157,8 +157,11 @@ for et in sirene_csv:
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
-            i = commune_insee.index(depcom)
-            sirene_geo.writerow(et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]])
+            try:
+                i = commune_insee.index(depcom)
+                sirene_geo.writerow(et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]])
+            except:
+                sirene_geo.writerow(et+['','',0,'','',''])
         else:
             ok = ok +1
             sirene_geo.writerow(et+[source['geometry']['coordinates'][0],
