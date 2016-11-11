@@ -15,7 +15,7 @@ Il est ensuite dénormalisé et simplifié:
 - élimination des libellés
 - dénormalisation des données géographiques
 
-Il est ensuite découpé par départements (colonne DEPET), pour un traitement en parallèle.
+Il est ensuite découpé par départements (colonne DEPET), pour un traitement en parallèle (avec GNU parallel).
 
 Un script python effectue de multiples géocodages pour sélectionner le résultat le plus proche de l'information d'origine.
 Il utilise par défaut la BAN et BANO en second choix si l'adresse n'est pas trouvé ou si le score minimal n'est pas atteint.

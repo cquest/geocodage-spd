@@ -9,6 +9,6 @@ csvclean sirc*.csv -e 'ISO8859-1' -d ';'
 # suppression des libellés et dénormalisations du COG
 csvcut sirc*_out.csv -v -C RPET,LIBREG,LIBCOM,EPCI,LIBNATETAB,LIBAPET,LIBTEFET,LIBNJ,LIBAPEN,LIBTEFEN,ARRONET,CTONET,DU,UU,TU,ZEMET > sirene_mini.csv
 
-# préparation base sqlite avec COG
-wget -nc http://www.insee.fr/fr/methodes/nomenclatures/cog/telechargement/2016/txt/comsimp2016.zip
-unzip comsimp2016.zip
+# préparation CSV position des communes
+wget -nc https://www.data.gouv.fr/_uploads/resources/communes-plus-20140630-csv.zip
+unzip communes-plus-20140630-csv.zip

@@ -27,7 +27,16 @@ addok_bano = 'http://localhost:7878/search'
 
 sirene_csv = csv.reader(open(sys.argv[1],'r'))
 sirene_geo = csv.writer(open('geo-'+sys.argv[1],'w'))
-cog = sqlite3.connect('cog.db').cursor()
+
+# chargement de la liste des communes et lat/lon
+communes = csv.DictReader(open('communes-plus-20140630.csv','r'))
+commune_insee = []
+commune_latitude = []
+commune_longitude = []
+for commune in communes:
+    commune_insee.append(commune['\ufeffinsee'])
+    commune_latitude.append(round(float(commune['lon_centro']),6))
+    commune_longitude.append(round(float(commune['lat_centro']),6))
 
 header = None
 ok = 0
@@ -121,8 +130,8 @@ for et in sirene_csv:
                 if ban_avant is not None and ban_apres is not None:
                     if ban_avant['properties']['type'] == 'housenumber' and ban_apres['properties']['type'] == 'housenumber' and ban_avant['properties']['score']>0.5 and ban_apres['properties']['score']>score_min :
                         source = ban
-                        source['geometry']['coordinates'][0] = (ban_avant['geometry']['coordinates'][0]+ban_apres['geometry']['coordinates'][0])/2
-                        source['geometry']['coordinates'][1] = (ban_avant['geometry']['coordinates'][1]+ban_apres['geometry']['coordinates'][1])/2
+                        source['geometry']['coordinates'][0] = round((ban_avant['geometry']['coordinates'][0]+ban_apres['geometry']['coordinates'][0])/2,6)
+                        source['geometry']['coordinates'][1] = round((ban_avant['geometry']['coordinates'][1]+ban_apres['geometry']['coordinates'][1])/2,6)
                         source['properties']['score'] = (ban_avant['properties']['score']+ban_apres['properties']['score'])/2
                         source['properties']['type'] = 'interpolation'
                         source['properties']['id'] = ''
@@ -147,9 +156,9 @@ for et in sirene_csv:
                 source = bano
 
         if source is None:
-            cog.execute('SELECT longitude, latitude, insee FROM cog WHERE insee = ?',(,))
-            commune = cog.fetchone()
-            sirene_geo.writerow(et+[commune[0],commune[1],0,'municipality','',commune[2]])
+            # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
+            i = commune_insee.index(depcom)
+            sirene_geo.writerow(et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]])
         else:
             ok = ok +1
             sirene_geo.writerow(et+[source['geometry']['coordinates'][0],
