@@ -38,6 +38,18 @@ for commune in communes:
     commune_latitude.append(round(float(commune['lon_centro']),6))
     commune_longitude.append(round(float(commune['lat_centro']),6))
 
+# chargement de la liste des mairies et lat/lon
+mairies = csv.DictReader(open('communes_mairies.csv','r'))
+mairies_insee = []
+mairies_latitude = []
+mairies_longitude = []
+for mairie in mairies:
+    if mairie['lat'] != '' and mairie['lng'] !='':
+        mairies_insee.append(mairie['codeinsee'])
+        mairies_latitude.append(round(float(mairie['lat']),6))
+        mairies_longitude.append(round(float(mairie['lng']),6))
+
+
 header = None
 ok = 0
 total = 0
@@ -150,10 +162,7 @@ for et in sirene_csv:
                         source['properties']['score'] = (ban_avant['properties']['score']+ban_apres['properties']['score'])/2
                         source['properties']['type'] = 'interpolation'
                         source['properties']['id'] = ''
-                        if 'street' in source['properties']:
-                            source['properties']['label'] = '%s %s %s %s' % (numvoie, source['properties']['street'], source['properties']['postcode'], source['properties']['city'])
-                        else:
-                            source['properties']['label'] = '%s %s %s %s' % (numvoie, source['properties']['locality'], source['properties']['postcode'], source['properties']['city'])
+                        source['properties']['label'] = numvoie + ban_avant['properties']['label'][len(ban_avant['properties']['housenumber']):]
 
         # on essaye sans l'indice de répétition (BIS, TER qui ne correspond pas ou qui manque en base)
         if source is None and ban is None and indrep != '':
@@ -205,12 +214,15 @@ for et in sirene_csv:
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
+            row = et+['','',0,'','','']
             try:
                 i = commune_insee.index(depcom)
-                sirene_geo.writerow(et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]])
+                row = et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]]
                 if ligne4G.strip() !='':
                     print('(%s) %s' % (depcom, ligne4G.strip()))
                     if typvoie == '' and (libvoie == 'MAIRIE' or libvoie == 'HOTEL DE VILLE'):
+                        i = mairies_insee.index(depcom)
+                        row = et+[mairies_longitude[i],mairies_latitude[i],0,'locality','',mairies_insee[i]]
                         stats['townhall']+=1
                         ok = ok +1
                     else:
@@ -219,7 +231,8 @@ for et in sirene_csv:
                     stats['vide']+=1
                     ok = ok +1
             except:
-                sirene_geo.writerow(et+['','',0,'','',''])
+                pass
+            sirene_geo.writerow(row)
         else:
             ok = ok +1
             if ['village','town','city'].count(source['properties']['type'])>0:
