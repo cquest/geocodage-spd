@@ -12,3 +12,9 @@ csvcut sirc*_out.csv -v -C RPET,LIBREG,LIBCOM,EPCI,LIBNATETAB,LIBAPET,LIBTEFET,L
 # préparation CSV position des communes
 wget -nc https://www.data.gouv.fr/_uploads/resources/communes-plus-20140630-csv.zip
 unzip communes-plus-20140630-csv.zip
+
+# position des mairies
+wget -nc http://www.ideeslibres.org/opendata/spbdlv2/organismes.csv.zip
+unzip organismes.csv.zip
+csvcut organismes.csv -c codeinsee,lat,lng -d ';' > communes_mairies.csv
+
