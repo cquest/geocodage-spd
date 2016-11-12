@@ -4,7 +4,7 @@ import csv
 import requests
 import json
 import sqlite3
-
+import re
 
 # effecture une req. sur l'API de géocodage
 def geocode(api, params):
@@ -41,6 +41,8 @@ for commune in communes:
 header = None
 ok = 0
 total = 0
+numbers = re.compile('(^[0-9]*)')
+
 for et in sirene_csv:
     if header is None:
         header = et+['longitude','latitude','geo_score','geo_type','geo_adresse','geo_id']
@@ -48,12 +50,20 @@ for et in sirene_csv:
     else:
         total = total + 1
         # géocodage de l'adresse géographique
-        numvoie = et[16]
+        # au cas où numvoie contiendrait autre chose que des chiffres...
+        numvoie = numbers.match(et[16]).group(0)
+
         indrep = et[17]
         typvoie = et[18]
         libvoie = et[19]
+
+        if numvoie == '' and numbers.match(libvoie).group(0):
+            numvoie = numbers.match(libvoie).group(0)
+            libvoie = libvoie[len(numvoie):]
+
+
         # ou de la ligne 4 normalisée
-        ligne4G = '%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)
+        ligne4G = '%s%s   %s   %s' % (numvoie, indrep, typvoie, libvoie)
         ligne4N = et[5]
         ligne4D = et[12]
         # code INSEE de la commune
