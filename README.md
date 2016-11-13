@@ -29,6 +29,7 @@ C'est l'adresse "géographique" qui est utilisée en premier et à défaut l'adr
 
 Si l'adresse n'est pas trouvée, les coordonnées du chef lieu de la commune sont utilisées comme longitude/latitude.
 Pour les adresses indiquées "MAIRIE" ou "HOTEL DE VILLE", les coordonnées sont reprises de l'annuaire des services publics diffusé en opendata par la DILA.
+Pour les adresses indiquées "CHEF LIEU", "BOURG", "LE BOURG" ou "AU BOURG", les coordonnées du chef-lieu de la commune sont utilisées.
 
 
 ## Colonnes ajoutées par le géocodage
@@ -41,6 +42,7 @@ Les champs ajoutés sont:
 "municipality" = position de la commune car l'adresse n'a pas été trouvée.
 - geo_adresse : libellé de l'adresse trouvée
 - geo_id : id dans le référentiel BAN, ou BANO (si commence par "BANO_")
+- geo_ligne : ligne d'adresse géocodée (G = géographique, N = normalisée, D = déclarée)
 
 
 **Les données contenues dans les colonnes ajoutées par le géocodage sont sous licence ODbL 1.0.**
