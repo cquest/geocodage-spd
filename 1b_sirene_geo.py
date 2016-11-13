@@ -3,14 +3,25 @@ import sys
 import csv
 import requests
 import json
-import sqlite3
 import re
 
+score_min = 0.30
+
+# URL à appeler pour géocodage BAN et BANO
+addok_ban = 'http://localhost:7979/search/'
+addok_bano = 'http://localhost:7878/search'
+
+geocode_count = 0
+
 # effecture une req. sur l'API de géocodage
-def geocode(api, params):
+def geocode(api, params, l4):
+    params['autocomplete']=0
     r = requests.get(api, params)
     j = json.loads(r.text)
+    global geocode_count
+    geocode_count += 1
     if 'features' in j and len(j['features'])>0:
+        j['features'][0]['l4'] = l4
         return(j['features'][0])
     else:
         return(None)
@@ -18,12 +29,6 @@ def geocode(api, params):
 def trace(txt):
     if False:
         print(txt)
-
-score_min = 0.30
-
-# URL à appeler pour géocodage BAN et BANO
-addok_ban = 'http://localhost:7979/search/'
-addok_bano = 'http://localhost:7878/search'
 
 sirene_csv = csv.reader(open(sys.argv[1],'r'))
 sirene_geo = csv.writer(open('geo-'+sys.argv[1],'w'))
@@ -54,14 +59,15 @@ header = None
 ok = 0
 total = 0
 numbers = re.compile('(^[0-9]*)')
-stats = {'housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0}
+stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0,'fichier':sys.argv[1]}
 
 for et in sirene_csv:
     if header is None:
-        header = et+['longitude','latitude','geo_score','geo_type','geo_adresse','geo_id']
+        header = et+['longitude','latitude','geo_score','geo_type','geo_adresse','geo_id','geo_ligne']
         sirene_geo.writerow(header)
     else:
         total = total + 1
+
         # géocodage de l'adresse géographique
         # au cas où numvoie contiendrait autre chose que des chiffres...
         numvoie = numbers.match(et[16]).group(0)
@@ -98,22 +104,22 @@ for et in sirene_csv:
         trace('%s / %s / %s' % (ligne4G, ligne4D, ligne4N))
 
         # géocodage BAN (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'})
+        ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
         if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4G:
-            ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'})
+            ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
             trace('+ ban  L4N')
         if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4N:
-            ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom, 'limit': '1'})
+            ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
             trace('+ ban  L4D')
 
 
         # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'})
+        bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
         if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4G:
-            bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'})
+            bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
             trace('+ bano L4N')
         if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4N:
-            bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'})
+            bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
             trace('+ bano L4D')
 
         if ban is not None:
@@ -152,8 +158,8 @@ for et in sirene_csv:
                 source = bano
             # on cherche une interpollation dans BAN
             elif ban is None or ban_type == 'street' and int(numvoie)>2:
-                ban_avant = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)-2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
-                ban_apres = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)+2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
+                ban_avant = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)-2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                ban_apres = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)+2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
                 if ban_avant is not None and ban_apres is not None:
                     if ban_avant['properties']['type'] == 'housenumber' and ban_apres['properties']['type'] == 'housenumber' and ban_avant['properties']['score']>0.5 and ban_apres['properties']['score']>score_min :
                         source = ban_avant
@@ -167,14 +173,14 @@ for et in sirene_csv:
         # on essaye sans l'indice de répétition (BIS, TER qui ne correspond pas ou qui manque en base)
         if source is None and ban is None and indrep != '':
             trace('supp. indrep BAN : %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_ban, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
+            addok = geocode(addok_ban, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
             if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
                 addok['properties']['type'] = 'interpolation'
                 source = addok
                 trace('+ ban  L4G-indrep')
         if source is None and bano is None and indrep != '':
             trace('supp. indrep BANO: %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_bano, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
+            addok = geocode(addok_bano, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
             if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
                 addok['properties']['type'] = 'interpolation'
                 source = addok
@@ -192,12 +198,12 @@ for et in sirene_csv:
         # pas trouvé ? on cherche sans numvoie
         if source is None and numvoie != '':
             trace('supp. numvoie : %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_ban, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
+            addok = geocode(addok_ban, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
             if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
                 source = addok
                 trace('+ ban  L4G-numvoie')
         if source is None and numvoie != '':
-            addok = geocode(addok_bano, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'})
+            addok = geocode(addok_bano, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
             if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
                 source = addok
                 trace('+ bano L4G-numvoie')
@@ -214,19 +220,22 @@ for et in sirene_csv:
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
-            row = et+['','',0,'','','']
+            row = et+['','',0,'','','','']
             try:
                 i = commune_insee.index(depcom)
-                row = et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i]]
+                row = et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i],'']
                 if ligne4G.strip() !='':
-                    print('(%s) %s' % (depcom, ligne4G.strip()))
-                    if typvoie == '' and (libvoie == 'MAIRIE' or libvoie == 'HOTEL DE VILLE'):
+                    if typvoie == '' and ['CHEF LIEU','CHEF-LIEU','BOURG','LE BOURG','AU BOURG'].count(libvoie)>0:
+                        stats['locality']+=1
+                        ok = ok +1
+                    elif typvoie == '' and ['MAIRIE','HOTEL DE VILLE'].count(libvoie)>0:
                         i = mairies_insee.index(depcom)
-                        row = et+[mairies_longitude[i],mairies_latitude[i],0,'locality','',mairies_insee[i]]
+                        row = et+[mairies_longitude[i],mairies_latitude[i],0,'locality','',mairies_insee[i],'G']
                         stats['townhall']+=1
                         ok = ok +1
                     else:
                         stats['municipality']+=1
+                        print(json.dumps({'action':'manque','siren': et[0], 'nic': et[1], 'adr_insee': depcom, 'adr_texte': ligne4G.strip()},sort_keys=True))
                 else:
                     stats['vide']+=1
                     ok = ok +1
@@ -243,8 +252,16 @@ for et in sirene_csv:
                                     round(source['properties']['score'],2),
                                     source['properties']['type'],
                                     source['properties']['label'],
-                                    source['properties']['id']])
+                                    source['properties']['id'],
+                                    source['l4']])
         if total % 1000 == 0:
-            print(total, round(100*ok/total,2), stats)
+            stats['count'] = total
+            stats['geocode_count'] = geocode_count
+            stats['efficacite'] = round(100*ok/total,2)
+            print(json.dumps(stats,sort_keys=True))
 
-print(stats)
+stats['count'] = total
+stats['geocode_count'] = geocode_count
+stats['action'] = 'final'
+stats['efficacite'] = round(100*ok/total,2)
+print(json.dumps(stats,sort_keys=True))
