@@ -4,10 +4,13 @@ create table sirene_natetab as select natetab as co_natetab, libnatetab from sir
 
 create table sirene_tef as select tefet as co_tef, libtefet as libtef from sirene group by 1,2;
 
+create table sirene_nj as select nj as co_nj, libnj from sirene group by 1,2;
+
 alter table sirene drop column libapet;
 alter table sirene drop column libapen;
 alter table sirene drop column libnatetab;
 alter table sirene drop column libtefet;
 alter table sirene drop column libtefen;
+alter table sirene drop column libnj;
 
 vacuum full sirene;
