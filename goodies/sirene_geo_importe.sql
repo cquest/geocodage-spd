@@ -98,7 +98,5 @@ CREATE TABLE sirene_geo (SIREN text,NIC text,L1_NORMALISEE text,L2_NORMALISEE te
 \copy sirene_geo from geo-sirene_93.csv with (format csv, header true)
 \copy sirene_geo from geo-sirene_94.csv with (format csv, header true)
 \copy sirene_geo from geo-sirene_95.csv with (format csv, header true)
-\copy sirene_geo from geo-sirene_96.csv with (format csv, header true)
 \copy sirene_geo from geo-sirene_97.csv with (format csv, header true)
 \copy sirene_geo from geo-sirene_98.csv with (format csv, header true)
-\copy sirene_geo from geo-sirene_99.csv with (format csv, header true)
