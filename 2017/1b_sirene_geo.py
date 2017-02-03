@@ -228,11 +228,6 @@ for et in sirene_csv:
                     if typvoie == '' and ['CHEF LIEU','CHEF-LIEU','BOURG','LE BOURG','AU BOURG'].count(libvoie)>0:
                         stats['locality']+=1
                         ok = ok +1
-                    elif typvoie == '' and ['MAIRIE','HOTEL DE VILLE'].count(libvoie)>0:
-                        i = mairies_insee.index(depcom)
-                        row = et+[mairies_longitude[i],mairies_latitude[i],0,'locality','',mairies_insee[i],'G']
-                        stats['townhall']+=1
-                        ok = ok +1
                     else:
                         stats['municipality']+=1
                         print(json.dumps({'action':'manque','siren': et[0], 'nic': et[1], 'adr_insee': depcom, 'adr_texte': ligne4G.strip()},sort_keys=True))
