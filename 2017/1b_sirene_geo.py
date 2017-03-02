@@ -17,13 +17,16 @@ geocode_count = 0
 def geocode(api, params, l4):
     params['autocomplete']=0
     r = requests.get(api, params)
-    j = json.loads(r.text)
-    global geocode_count
-    geocode_count += 1
-    if 'features' in j and len(j['features'])>0:
-        j['features'][0]['l4'] = l4
-        return(j['features'][0])
-    else:
+    try:
+        j = json.loads(r.text)
+        global geocode_count
+        geocode_count += 1
+        if 'features' in j and len(j['features'])>0:
+            j['features'][0]['l4'] = l4
+            return(j['features'][0])
+        else:
+            return(None)
+    except:
         return(None)
 
 def trace(txt):
@@ -95,16 +98,18 @@ for et in sirene_csv:
         libvoie = re.sub(r'^SANS DOMICILE FIXE','',libvoie)
 
         # ou de la ligne 4 normalisée
-        ligne4G = '%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)
-        ligne4N = et[5]
-        ligne4D = et[12]
+        ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
+        ligne4N = et[5].strip()
+        ligne4D = et[12].strip()
         # code INSEE de la commune
         depcom = '%s%s' % (et[22],et[23])
 
         trace('%s / %s / %s' % (ligne4G, ligne4D, ligne4N))
 
         # géocodage BAN (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+        ban = None
+        if ligne4G != '':
+           ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
         if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4G:
             ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
             trace('+ ban  L4N')
@@ -114,7 +119,9 @@ for et in sirene_csv:
 
 
         # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+        bano = None
+        if ligne4G != '':
+            bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
         if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4G:
             bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
             trace('+ bano L4N')
