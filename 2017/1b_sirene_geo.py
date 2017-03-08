@@ -4,6 +4,8 @@ import csv
 import requests
 import json
 import re
+import sqlite3
+import marshal
 
 score_min = 0.30
 
@@ -61,8 +63,14 @@ for mairie in mairies:
 header = None
 ok = 0
 total = 0
+cache = 0
 numbers = re.compile('(^[0-9]*)')
 stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0,'fichier':sys.argv[1]}
+
+
+conn = sqlite3.connect('cache_addok_'+sys.argv[1]+'.db')
+conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text)')
+conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
 
 for et in sirene_csv:
     if header is None:
@@ -103,127 +111,139 @@ for et in sirene_csv:
         ligne4D = et[12].strip()
         # code INSEE de la commune
         depcom = '%s%s' % (et[22],et[23])
-
-        trace('%s / %s / %s' % (ligne4G, ligne4D, ligne4N))
-
-        # géocodage BAN (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        ban = None
-        if ligne4G != '':
-           ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
-        if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4G:
-            ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
-            trace('+ ban  L4N')
-        if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4N:
-            ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
-            trace('+ ban  L4D')
-
-
-        # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
-        bano = None
-        if ligne4G != '':
-            bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
-        if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4G:
-            bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
-            trace('+ bano L4N')
-        if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4N:
-            bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
-            trace('+ bano L4D')
-
-        if ban is not None:
-            ban_score = ban['properties']['score']
-            ban_type = ban['properties']['type']
-            if ['village','town','city'].count(ban_type)>0:
-                ban_type = 'municipality'
+        try:
+            cursor = conn.execute('SELECT * FROM cache_addok WHERE adr=?', ('%s|%s|%s|%s' % (depcom,ligne4G,ligne4N,ligne4D), ))
+            g = cursor.fetchone()
+        except:
+            g = None
+        if g is not None:
+            source = marshal.loads(g[1])
+            cache = cache+1
         else:
-            ban_score = 0
-            ban_type = ''
-        if bano is not None:
-            bano_score = bano['properties']['score']
-            if bano['properties']['type'] == 'place':
-                bano['properties']['type'] = 'locality'
-            bano['properties']['id'] = 'BANO_'+bano['properties']['id']
-            if bano['properties']['type'] == 'housenumber':
-                bano['properties']['id'] = '%s_%s' % (bano['properties']['id'],bano['properties']['housenumber'])
-            bano_type = bano['properties']['type']
-            if ['village','town','city'].count(bano_type)>0:
-                bano_type = 'municipality'
-        else:
-            bano_score = 0
-            bano_type = ''
 
-        # choix de la source
-        source = None
+            trace('%s / %s / %s' % (ligne4G, ligne4D, ligne4N))
 
-        # on a un numéro... on cherche dessus
-        if numvoie != '' :
-            # numéro trouvé dans les deux bases, on prend BAN sauf si score inférieur de 20% à BANO
-            if ban_type == 'housenumber' and bano_type == 'housenumber' and ban_score > score_min and ban_score >= bano_score/1.2:
-                source = ban
-            elif ban_type == 'housenumber' and ban_score > score_min:
-                source = ban
-            elif bano_type == 'housenumber' and bano_score > score_min:
-                source = bano
-            # on cherche une interpollation dans BAN
-            elif ban is None or ban_type == 'street' and int(numvoie)>2:
-                ban_avant = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)-2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-                ban_apres = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)+2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-                if ban_avant is not None and ban_apres is not None:
-                    if ban_avant['properties']['type'] == 'housenumber' and ban_apres['properties']['type'] == 'housenumber' and ban_avant['properties']['score']>0.5 and ban_apres['properties']['score']>score_min :
-                        source = ban_avant
-                        source['geometry']['coordinates'][0] = round((ban_avant['geometry']['coordinates'][0]+ban_apres['geometry']['coordinates'][0])/2,6)
-                        source['geometry']['coordinates'][1] = round((ban_avant['geometry']['coordinates'][1]+ban_apres['geometry']['coordinates'][1])/2,6)
-                        source['properties']['score'] = (ban_avant['properties']['score']+ban_apres['properties']['score'])/2
-                        source['properties']['type'] = 'interpolation'
-                        source['properties']['id'] = ''
-                        source['properties']['label'] = numvoie + ban_avant['properties']['label'][len(ban_avant['properties']['housenumber']):]
-
-        # on essaye sans l'indice de répétition (BIS, TER qui ne correspond pas ou qui manque en base)
-        if source is None and ban is None and indrep != '':
-            trace('supp. indrep BAN : %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_ban, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-            if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
-                addok['properties']['type'] = 'interpolation'
-                source = addok
-                trace('+ ban  L4G-indrep')
-        if source is None and bano is None and indrep != '':
-            trace('supp. indrep BANO: %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_bano, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-            if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
-                addok['properties']['type'] = 'interpolation'
-                source = addok
-                trace('+ bano L4G-indrep')
-
-        # pas trouvé ? on cherche une rue
-        if source is None and typvoie != '':
-            if ban_type == 'street' and bano_type == 'street' and ban_score > score_min and ban_score >= bano_score/1.2:
-                source = ban
-            elif ban_type == 'street' and ban_score > score_min:
-                source = ban
-            elif bano_type == 'street' and bano_score > score_min:
-                source = bano
-
-        # pas trouvé ? on cherche sans numvoie
-        if source is None and numvoie != '':
-            trace('supp. numvoie : %s %s %s' % (numvoie, typvoie, libvoie))
-            addok = geocode(addok_ban, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-            if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
-                source = addok
-                trace('+ ban  L4G-numvoie')
-        if source is None and numvoie != '':
-            addok = geocode(addok_bano, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
-            if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
-                source = addok
-                trace('+ bano L4G-numvoie')
+            # géocodage BAN (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
+            ban = None
+            if ligne4G != '':
+               ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+            if ban is None or ban['properties']['score']<score_min and ligne4N != ligne4G and ligne4N !='':
+                ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
+                trace('+ ban  L4N')
+            if ban is None or ban['properties']['score']<score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D !='':
+                ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
+                trace('+ ban  L4D')
 
 
-        # pas trouvé ? tout type accepté...
-        if source is None:
-            if ban_score > score_min and ban_score >= bano_score*0.8:
-                source = ban
-            elif ban_score > score_min:
-                source = ban
-            elif bano_score > score_min:
-                source = bano
+            # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
+            bano = None
+            if ligne4G != '':
+                bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+            if bano is None or bano['properties']['score']<score_min and ligne4N != ligne4G and ligne4N !='':
+                bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
+                trace('+ bano L4N')
+            if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D !='':
+                bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
+                trace('+ bano L4D')
+
+            if ban is not None:
+                ban_score = ban['properties']['score']
+                ban_type = ban['properties']['type']
+                if ['village','town','city'].count(ban_type)>0:
+                    ban_type = 'municipality'
+            else:
+                ban_score = 0
+                ban_type = ''
+            if bano is not None:
+                bano_score = bano['properties']['score']
+                if bano['properties']['type'] == 'place':
+                    bano['properties']['type'] = 'locality'
+                bano['properties']['id'] = 'BANO_'+bano['properties']['id']
+                if bano['properties']['type'] == 'housenumber':
+                    bano['properties']['id'] = '%s_%s' % (bano['properties']['id'],bano['properties']['housenumber'])
+                bano_type = bano['properties']['type']
+                if ['village','town','city'].count(bano_type)>0:
+                    bano_type = 'municipality'
+            else:
+                bano_score = 0
+                bano_type = ''
+
+            # choix de la source
+            source = None
+
+            # on a un numéro... on cherche dessus
+            if numvoie != '' :
+                # numéro trouvé dans les deux bases, on prend BAN sauf si score inférieur de 20% à BANO
+                if ban_type == 'housenumber' and bano_type == 'housenumber' and ban_score > score_min and ban_score >= bano_score/1.2:
+                    source = ban
+                elif ban_type == 'housenumber' and ban_score > score_min:
+                    source = ban
+                elif bano_type == 'housenumber' and bano_score > score_min:
+                    source = bano
+                # on cherche une interpollation dans BAN
+                elif ban is None or ban_type == 'street' and int(numvoie)>2:
+                    ban_avant = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)-2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                    ban_apres = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)+2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                    if ban_avant is not None and ban_apres is not None:
+                        if ban_avant['properties']['type'] == 'housenumber' and ban_apres['properties']['type'] == 'housenumber' and ban_avant['properties']['score']>0.5 and ban_apres['properties']['score']>score_min :
+                            source = ban_avant
+                            source['geometry']['coordinates'][0] = round((ban_avant['geometry']['coordinates'][0]+ban_apres['geometry']['coordinates'][0])/2,6)
+                            source['geometry']['coordinates'][1] = round((ban_avant['geometry']['coordinates'][1]+ban_apres['geometry']['coordinates'][1])/2,6)
+                            source['properties']['score'] = (ban_avant['properties']['score']+ban_apres['properties']['score'])/2
+                            source['properties']['type'] = 'interpolation'
+                            source['properties']['id'] = ''
+                            source['properties']['label'] = numvoie + ban_avant['properties']['label'][len(ban_avant['properties']['housenumber']):]
+
+            # on essaye sans l'indice de répétition (BIS, TER qui ne correspond pas ou qui manque en base)
+            if source is None and ban is None and indrep != '':
+                trace('supp. indrep BAN : %s %s %s' % (numvoie, typvoie, libvoie))
+                addok = geocode(addok_ban, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
+                    addok['properties']['type'] = 'interpolation'
+                    source = addok
+                    trace('+ ban  L4G-indrep')
+            if source is None and bano is None and indrep != '':
+                trace('supp. indrep BANO: %s %s %s' % (numvoie, typvoie, libvoie))
+                addok = geocode(addok_bano, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
+                    addok['properties']['type'] = 'interpolation'
+                    source = addok
+                    trace('+ bano L4G-indrep')
+
+            # pas trouvé ? on cherche une rue
+            if source is None and typvoie != '':
+                if ban_type == 'street' and bano_type == 'street' and ban_score > score_min and ban_score >= bano_score/1.2:
+                    source = ban
+                elif ban_type == 'street' and ban_score > score_min:
+                    source = ban
+                elif bano_type == 'street' and bano_score > score_min:
+                    source = bano
+
+            # pas trouvé ? on cherche sans numvoie
+            if source is None and numvoie != '':
+                trace('supp. numvoie : %s %s %s' % (numvoie, typvoie, libvoie))
+                addok = geocode(addok_ban, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
+                    source = addok
+                    trace('+ ban  L4G-numvoie')
+            if source is None and numvoie != '':
+                addok = geocode(addok_bano, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
+                    source = addok
+                    trace('+ bano L4G-numvoie')
+
+
+            # pas trouvé ? tout type accepté...
+            if source is None:
+                if ban_score > score_min and ban_score >= bano_score*0.8:
+                    source = ban
+                elif ban_score > score_min:
+                    source = ban
+                elif bano_score > score_min:
+                    source = bano
+
+            # on conserve le résultat dans le cache sqlite
+            cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?)', ('%s|%s|%s|%s' % (depcom,ligne4G,ligne4N,ligne4D), marshal.dumps(source)))
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
@@ -257,13 +277,16 @@ for et in sirene_csv:
                                     source['properties']['id'],
                                     source['l4']])
         if total % 1000 == 0:
+            stats['geocode_cache'] = cache
             stats['count'] = total
             stats['geocode_count'] = geocode_count
             stats['efficacite'] = round(100*ok/total,2)
             print(json.dumps(stats,sort_keys=True))
+            conn.commit()
 
 stats['count'] = total
 stats['geocode_count'] = geocode_count
 stats['action'] = 'final'
 stats['efficacite'] = round(100*ok/total,2)
 print(json.dumps(stats,sort_keys=True))
+conn.commit()
