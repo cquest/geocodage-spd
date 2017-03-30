@@ -7,7 +7,7 @@ Pour fonctionner, ces scripts ont besoin de deux instances du géocodeur addok:
 - la seconde avec la BANO
 
 Ceci représente au moins 36Go de RAM.
-A titre d'information, le traitement intégral prends environ 8 heures sur une machine avec 24 coeurs et 96Go de RAM.
+A titre d'information, le traitement intégral prends environ ~8 heures~ 4 heures sur une machine avec 24 coeurs et 96Go de RAM.
 
 
 ## Principe
