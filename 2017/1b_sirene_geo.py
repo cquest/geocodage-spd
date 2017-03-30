@@ -68,7 +68,7 @@ numbers = re.compile('(^[0-9]*)')
 stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0,'fichier':sys.argv[1]}
 
 
-conn = sqlite3.connect('cache_addok_'+sys.argv[1]+'.db')
+conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
 conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text)')
 conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
 
@@ -284,6 +284,7 @@ for et in sirene_csv:
             print(json.dumps(stats,sort_keys=True))
             conn.commit()
 
+stats['geocode_cache'] = cache
 stats['count'] = total
 stats['geocode_count'] = geocode_count
 stats['action'] = 'final'
