@@ -41,4 +41,4 @@ echo "5/5 : split par commune"
 ls -1 geo-sirene_*.csv | parallel ./2_split_rsync.sh {}
 
 # extraction liste des CEDEX, libelles et code INSEE (DEP/COM)
-echo 'cp,libelle,insee' > cedex.csv; grep CEDEX sirene-mini.csv | csvcut -c 8,23,24 | grep CEDEX | sort -u | grep '^[0-9][0-9][0-9][0-9][0-9]' | sed 's/^\(.....\) /"\1,/;s/,\(...\)$/\1"/;s/,/","/g' >> cedex.csv
+echo 'cedex,libelle,insee' > cedex.csv; grep CEDEX sirene-mini.csv | csvcut -c 8,23,24 | grep CEDEX | sort -u | grep '^[0-9][0-9][0-9][0-9][0-9]' | sed 's/^\(.....\) /"\1,/;s/,\(...\)$/\1"/;s/,/","/g' >> cedex.csv
