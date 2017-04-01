@@ -18,8 +18,9 @@ geocode_count = 0
 # effecture une req. sur l'API de géocodage
 def geocode(api, params, l4):
     params['autocomplete']=0
-    r = requests.get(api, params)
+    params['q'] = params['q'].strip()
     try:
+        r = requests.get(api, params)
         j = json.loads(r.text)
         global geocode_count
         geocode_count += 1
@@ -29,6 +30,7 @@ def geocode(api, params, l4):
         else:
             return(None)
     except:
+        print("err_geocode", params, l4)
         return(None)
 
 def trace(txt):
