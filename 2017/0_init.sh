@@ -12,11 +12,13 @@ mkdir -p sirene_geo
 mkdir -p cache_geo
 
 echo "3/5 : découpage en fichiers départementaux"
-for d in {01..19} 2A 2B {21..98}; do
+for d in {01..19} 2A 2B {21..99}; do
   head -n 1 sirene-mini.csv > sirene_$d.csv
 done
 # split du fichier national sur DEPET (23ème colonne)
 awk -v FPAT='[^,]*|"([^"]|"")*"' '{ print >> "sirene_"$23".csv"}' sirene-mini.csv
+cat sirene_.csv >> sirene_99.csv
+rm sirene_DEPET.csv
 
 # découpage du fichier national en fichiers par département (DOM groupés)
 #echo {01..19} 2A 2B {21..98} | sed 's/ /\n/g' | \
