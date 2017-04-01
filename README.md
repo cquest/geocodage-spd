@@ -7,7 +7,7 @@ Pour fonctionner, ces scripts ont besoin de deux instances du géocodeur addok:
 - la seconde avec la BANO
 
 Ceci représente au moins 36Go de RAM.
-A titre d'information, le traitement intégral prends environ 8 heures sur une machine avec 24 coeurs et 96Go de RAM.
+A titre d'information, le traitement intégral prends environ ~8 heures~ 4 heures sur une machine avec 24 coeurs et 96Go de RAM.
 
 
 ## Principe
@@ -28,7 +28,7 @@ Il utilise par défaut la BAN et BANO en second choix si l'adresse n'est pas tro
 C'est l'adresse "géographique" qui est utilisée en premier et à défaut l'adresse déclarée (ligne4) ou l'adresse normalisée.
 
 Si l'adresse n'est pas trouvée, les coordonnées du chef lieu de la commune sont utilisées comme longitude/latitude.
-Pour les adresses indiquées "MAIRIE" ou "HOTEL DE VILLE", les coordonnées sont reprises de l'annuaire des services publics diffusé en opendata par la DILA.
+~Pour les adresses indiquées "MAIRIE" ou "HOTEL DE VILLE", les coordonnées sont reprises de l'annuaire des services publics diffusé en opendata par la DILA.~ *Plus utilisé par manque de qualité de la géolocalisation.*
 Pour les adresses indiquées "CHEF LIEU", "BOURG", "LE BOURG" ou "AU BOURG", les coordonnées du chef-lieu de la commune sont utilisées.
 
 
