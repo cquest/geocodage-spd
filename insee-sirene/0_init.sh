@@ -42,5 +42,13 @@ time wc -c sirene_*.csv | sort -n -r | grep 'sirene_.*.csv' -o | \
 echo "5/5 : split par commune"
 ls -1 geo-sirene_*.csv | parallel ./2_split_rsync.sh {}
 
+mkdir -p "AAAA-MM"
+mv communes "AAAA-MM"
+cp *.pdf "AAAA-MM"
+ls -1 geo-sirene_*.csv | parallel 7z a {}.7z {}
+mv geo*.7z "AAAA-MM"
+
+rsync "AAAA-MM" root@sc1.cquest.org:/var/www/html/geo_sirene/ -avz --progress
+
 # extraction liste des CEDEX, libelles et code INSEE (DEP/COM)
 echo 'cedex,libelle,insee' > cedex.csv; grep CEDEX sirene-mini.csv | csvcut -c 8,23,24 | grep CEDEX | sort -u | grep '^[0-9][0-9][0-9][0-9][0-9]' | sed 's/^\(.....\) /"\1,/;s/,\(...\)$/\1"/;s/,/","/g' >> cedex.csv
