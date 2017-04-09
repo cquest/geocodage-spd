@@ -30,5 +30,5 @@ time wc -c rna_waldec_d*.csv | sort -n -r | grep 'rna_waldec_.*.csv' -o | \
   parallel -j 36 -t  python 2_rna_geo.py {} \> {}.log
 
 echo "7/$t compression"
-time wc -c rna_waldec_d*.csv | sort -n -r | grep 'rna_waldec_.*.csv' -o | \
+time wc -c geo-rna_waldec_d*.csv | sort -n -r | grep 'geo-rna_waldec_.*.csv' -o | \
   parallel -j 12 gzip -9 {}
