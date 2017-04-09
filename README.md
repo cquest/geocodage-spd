@@ -12,4 +12,8 @@ Ce script est exécuté en paralèlle à l'aide de la commande GNU parallel.
 
 ## SIRENE
 
+[A propos du géocodage de la base SIRENE](insee-sirene/README.md)
+
 ## RNA
+
+[A propos du géocodage du RNA](rna/README.md)
