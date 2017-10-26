@@ -12,7 +12,7 @@ mkdir -p sirene_geo
 mkdir -p cache_geo
 
 echo "3/5 : découpage en fichiers départementaux"
-for d in {01..19} 2A 2B {21..99}; do
+for d in `seq -w 1 19` 2A 2B `seq 21 99`; do
   head -n 1 sirene-mini.csv > sirene_$d.csv
 done
 # split du fichier national sur DEPET (23ème colonne)
@@ -25,15 +25,17 @@ rm sirene_DEPET.csv
 #  parallel -j 24 -t csvgrep sirene-mini.csv -c DEPET -m {} \> sirene_{}.csv
 
 # découpage Paris
-echo {101..120} | sed 's/ /\n/g' | \
+seq 101 120 | sed 's/ /\n/g' | \
     parallel -t csvgrep sirene_75.csv -c COMET -m {} \> sirene_75{}.csv
 
 # découpage DOM
-echo {1..6} | sed 's/ /\n/g' | \
+seq 1 6 | sed 's/ /\n/g' | \
     parallel -t csvgrep sirene_97.csv -c COMET -r "{}.*" \> sirene_97{}.csv
 
 rm sirene_97.csv
 rm sirene_75.csv
+rm sirene_.csv
+rm sirene_96.csv
 
 echo "4/5 : géocodage par taille décroissante"
 time wc -c sirene_*.csv | sort -n -r | grep 'sirene_.*.csv' -o | \
@@ -44,9 +46,11 @@ ls -1 geo-sirene_*.csv | parallel ./2_split_rsync.sh {}
 
 mkdir -p "AAAA-MM"
 mv communes "AAAA-MM"
-cp *.pdf "AAAA-MM"
+cp Licence*.pdf "AAAA-MM" # licence
 ls -1 geo-sirene_*.csv | parallel 7z a {}.7z {}
 mv geo*.7z "AAAA-MM"
+
+grep final -h *.log > AAAA-MM/stats.json
 
 rsync "AAAA-MM" root@sc1.cquest.org:/var/www/html/geo_sirene/ -avz --progress
 
