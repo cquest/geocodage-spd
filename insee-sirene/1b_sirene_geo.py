@@ -50,17 +50,6 @@ for commune in communes:
     commune_latitude.append(round(float(commune['lon_centro']),6))
     commune_longitude.append(round(float(commune['lat_centro']),6))
 
-# chargement de la liste des mairies et lat/lon
-mairies = csv.DictReader(open('communes_mairies.csv','r'))
-mairies_insee = []
-mairies_latitude = []
-mairies_longitude = []
-for mairie in mairies:
-    if mairie['lat'] != '' and mairie['lng'] !='':
-        mairies_insee.append(mairie['codeinsee'])
-        mairies_latitude.append(round(float(mairie['lat']),6))
-        mairies_longitude.append(round(float(mairie['lng']),6))
-
 
 header = None
 ok = 0
@@ -261,7 +250,7 @@ for et in sirene_csv:
                 i = commune_insee.index(depcom)
                 row = et+[commune_longitude[i],commune_latitude[i],0,'municipality','',commune_insee[i],'']
                 if ligne4G.strip() !='':
-                    if typvoie == '' and ['CHEF LIEU','CHEF-LIEU','BOURG','LE BOURG','AU BOURG'].count(libvoie)>0:
+                    if typvoie == '' and ['CHEF LIEU','CHEF-LIEU','LE CHEF LIEU','LE CHEF-LIEU','BOURG','LE BOURG','AU BOURG','VILLAGE','AU VILLAGE','LE VILLAGE'].count(libvoie)>0:
                         stats['locality']+=1
                         ok = ok +1
                     else:
