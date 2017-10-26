@@ -71,7 +71,7 @@ stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'local
 
 
 conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
-conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text)')
+conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
 conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
 
 for et in sirene_csv:
@@ -139,14 +139,15 @@ for et in sirene_csv:
 
             # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
             bano = None
-            if ligne4G != '':
-                bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
-            if bano is None or bano['properties']['score']<score_min and ligne4N != ligne4G and ligne4N !='':
-                bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
-                trace('+ bano L4N')
-            if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D !='':
-                bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
-                trace('+ bano L4D')
+            if ban is None or ban['properties']['score'] < 0.9:
+                if ligne4G != '':
+                    bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+                if bano is None or bano['properties']['score']<score_min and ligne4N != ligne4G and ligne4N !='':
+                    bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
+                    trace('+ bano L4N')
+                if bano is None or bano['properties']['score']<score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D !='':
+                    bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'},'D')
+                    trace('+ bano L4D')
 
             if ban is not None:
                 ban_score = ban['properties']['score']
@@ -172,16 +173,20 @@ for et in sirene_csv:
 
             # choix de la source
             source = None
+            score = 0
 
             # on a un numéro... on cherche dessus
             if numvoie != '' :
                 # numéro trouvé dans les deux bases, on prend BAN sauf si score inférieur de 20% à BANO
                 if ban_type == 'housenumber' and bano_type == 'housenumber' and ban_score > score_min and ban_score >= bano_score/1.2:
                     source = ban
+                    score = ban['properties']['score']
                 elif ban_type == 'housenumber' and ban_score > score_min:
                     source = ban
+                    score = ban['properties']['score']
                 elif bano_type == 'housenumber' and bano_score > score_min:
                     source = bano
+                    score = bano['properties']['score']
                 # on cherche une interpollation dans BAN
                 elif ban is None or ban_type == 'street' and int(numvoie)>2:
                     ban_avant = geocode(addok_ban, {'q': '%s %s %s' % (int(numvoie)-2, typvoie, libvoie), 'citycode': depcom, 'limit': '1'},'G')
@@ -189,6 +194,7 @@ for et in sirene_csv:
                     if ban_avant is not None and ban_apres is not None:
                         if ban_avant['properties']['type'] == 'housenumber' and ban_apres['properties']['type'] == 'housenumber' and ban_avant['properties']['score']>0.5 and ban_apres['properties']['score']>score_min :
                             source = ban_avant
+                            score = ban_avant['properties']['score']/2
                             source['geometry']['coordinates'][0] = round((ban_avant['geometry']['coordinates'][0]+ban_apres['geometry']['coordinates'][0])/2,6)
                             source['geometry']['coordinates'][1] = round((ban_avant['geometry']['coordinates'][1]+ban_apres['geometry']['coordinates'][1])/2,6)
                             source['properties']['score'] = (ban_avant['properties']['score']+ban_apres['properties']['score'])/2
@@ -216,6 +222,7 @@ for et in sirene_csv:
             if source is None and typvoie != '':
                 if ban_type == 'street' and bano_type == 'street' and ban_score > score_min and ban_score >= bano_score/1.2:
                     source = ban
+                    score = ban['properties']['score']
                 elif ban_type == 'street' and ban_score > score_min:
                     source = ban
                 elif bano_type == 'street' and bano_score > score_min:
@@ -245,7 +252,7 @@ for et in sirene_csv:
                     source = bano
 
             # on conserve le résultat dans le cache sqlite
-            cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?)', ('%s|%s|%s|%s' % (depcom,ligne4G,ligne4N,ligne4D), marshal.dumps(source)))
+            cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)', ('%s|%s|%s|%s' % (depcom,ligne4G,ligne4N,ligne4D), marshal.dumps(source), score))
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier CSV et donc la base sqlite
