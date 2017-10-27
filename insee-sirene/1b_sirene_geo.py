@@ -12,6 +12,7 @@ score_min = 0.30
 # URL à appeler pour géocodage BAN et BANO
 addok_ban = 'http://localhost:7979/search/'
 addok_bano = 'http://localhost:7878/search'
+addok_poi = 'http://localhost:7777/search'
 
 geocode_count = 0
 
@@ -56,12 +57,13 @@ ok = 0
 total = 0
 cache = 0
 numbers = re.compile('(^[0-9]*)')
-stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0,'fichier':sys.argv[1]}
+stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'locality':0,'municipality':0,'vide':0,'townhall':0,'poi':0,'fichier':sys.argv[1]}
 
 
 conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
 conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
 conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
+conn.execute('DELETE FROM cache_addok WHERE score=0')
 
 for et in sirene_csv:
     if header is None:
@@ -117,7 +119,7 @@ for et in sirene_csv:
             # géocodage BAN (ligne4 géo, déclarée ou normalisée si pas trouvé ou score insuffisant)
             ban = None
             if ligne4G != '':
-               ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
+                ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'},'G')
             if ban is None or ban['properties']['score']<score_min and ligne4N != ligne4G and ligne4N !='':
                 ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'},'N')
                 trace('+ ban  L4N')
@@ -231,7 +233,7 @@ for et in sirene_csv:
                     trace('+ bano L4G-numvoie')
 
 
-            # pas trouvé ? tout type accepté...
+            # toujours pas trouvé ? tout type accepté...
             if source is None:
                 if ban_score > score_min and ban_score >= bano_score*0.8:
                     source = ban
@@ -239,6 +241,51 @@ for et in sirene_csv:
                     source = ban
                 elif bano_score > score_min:
                     source = bano
+
+            # vraiment toujours pas trouvé comme adresse ? on cherche dans les POI OpenStreetMap...
+            if source is None:
+                # Mairies et Hôtels de Ville...
+                if ['MAIRIE','LA MAIRIE','HOTEL DE VILLE'].count(libvoie)>0:
+                    poi = geocode(addok_poi, {'q': 'hotel de ville', 'poi': 'townhall', 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > score_min:
+                        source = poi
+                # Gares...
+                elif ['GARE','GARE SNCF','LA GARE'].count(libvoie)>0:
+                    poi = geocode(addok_poi, {'q': 'gare', 'poi': 'station', 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > score_min:
+                        source = poi
+                # Centres commerciaux...
+                elif re.match(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)',libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': re.sub(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)','\1 Galerie Marchande',libvoie), 'poi':'mall', 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > 0.5:
+                        source = poi
+                elif re.match(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)',libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': re.sub(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)','\1 Centre Commercial',libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > 0.5:
+                        source = poi
+                # Aéroports et aérodromes...
+                elif re.match(r'(AEROPORT|AERODROME)',libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': libvoie, 'poi':'aerodrome', 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > score_min:
+                        source = poi
+                elif re.match(r'(AEROGARE|TERMINAL)',libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': re.sub(r'(AEROGARE|TERMINAL)','',libvoie)+' terminal', 'poi':'terminal', 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > score_min:
+                        source = poi
+
+                # recherche tout type de POI à partir du type et libellé de voie
+                if source is None:
+                    poi = geocode(addok_poi, {'q': typvoie+' '+libvoie, 'citycode': depcom, 'limit': '1'},'G')
+                    if poi is not None and poi['properties']['score'] > 0.7:
+                        source = poi
+
+                if source is not None:
+                    if source['properties']['poi'] != 'yes':
+                        source['properties']['type'] = source['properties']['type']+'.'+source['properties']['poi']
+                    print(json.dumps({'action':'poi','adr_insee': depcom, 'adr_texte': libvoie, 'poi':source },sort_keys=True))
+
+            if source is not None and score == 0:
+                score = source['properties']['score']
 
             # on conserve le résultat dans le cache sqlite
             cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)', ('%s|%s|%s|%s' % (depcom,ligne4G,ligne4N,ligne4D), marshal.dumps(source), score))
@@ -266,7 +313,7 @@ for et in sirene_csv:
             ok = ok +1
             if ['village','town','city'].count(source['properties']['type'])>0:
                 source['properties']['type'] = 'municipality'
-            stats[source['properties']['type']]+=1
+            stats[re.sub(r'\..*$','',source['properties']['type'])]+=1
             sirene_geo.writerow(et+[source['geometry']['coordinates'][0],
                                     source['geometry']['coordinates'][1],
                                     round(source['properties']['score'],2),
