@@ -20,10 +20,6 @@ awk -v FPAT='[^,]*|"([^"]|"")*"' '{ print >> "sirene_"$23".csv"}' sirene-mini.cs
 cat sirene_.csv >> sirene_99.csv
 rm sirene_DEPET.csv
 
-# découpage du fichier national en fichiers par département (DOM groupés)
-#echo {01..19} 2A 2B {21..98} | sed 's/ /\n/g' | \
-#  parallel -j 24 -t csvgrep sirene-mini.csv -c DEPET -m {} \> sirene_{}.csv
-
 # découpage Paris
 seq 101 120 | sed 's/ /\n/g' | \
     parallel -t csvgrep sirene_75.csv -c COMET -m {} \> sirene_75{}.csv
