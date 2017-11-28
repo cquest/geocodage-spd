@@ -34,19 +34,26 @@ rm sirene_.csv
 rm sirene_96.csv
 
 echo "4/5 : géocodage par taille décroissante"
-time wc -c sirene_*.csv | sort -n -r | grep 'sirene_.*.csv' -o | \
+time wc -l sirene_*.csv | sort -n -r | grep 'sirene_.*.csv' -o | \
   parallel -j 36 -t  ./1b_sirene_geo.py {} \> {}.log
 
 echo "5/5 : split par commune"
 ls -1 geo-sirene_*.csv | parallel ./2_split_rsync.sh {}
+
+echo "6/6 : fusion fichier national"
+head -n 1 geo-sirene_01.csv > geo_sirene.csv
+for f in geo-sirene_*.csv; do tail -n +2 $f >> geo_sirene.csv; done
+gzip -9 geo_sirene.csv
 
 mkdir -p "AAAA-MM"
 mv communes "AAAA-MM"
 cp Licence*.pdf "AAAA-MM" # licence
 ls -1 geo-sirene_*.csv | parallel 7z a {}.7z {}
 mv geo*.7z "AAAA-MM"
-
+mv geo_sirene.csv.gz "AAAA-MM"
 grep final -h *.log > AAAA-MM/stats.json
+
+7z a AAAA-MM/logs.7z *.log
 
 rsync "AAAA-MM" root@sc1.cquest.org:/var/www/html/geo_sirene/ -avz --progress
 
