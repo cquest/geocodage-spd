@@ -31,7 +31,7 @@ def geocode(api, params, l4):
         else:
             return(None)
     except:
-        print("err_geocode", params, l4)
+        print(json.dumps({'action':'erreur','params': params, 'l4': l4}))
         return(None)
 
 def trace(txt):
@@ -63,7 +63,10 @@ stats = {'action':'progress','housenumber':0,'interpolation':0,'street':0,'local
 conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
 conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
 conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
-conn.execute('DELETE FROM cache_addok WHERE score=0')
+conn.execute('DELETE FROM cache_addok WHERE score<0.6')
+
+# regexp souvent utilisées
+ccial = r'((C|CTRE|CENTRE|CNTRE|CENT|ESPACE) (CCIAL|CIAL|COM|COMM|COMMERC|COMMERCIAL)|CCR|C\.CIAL|C\.C|CCIAL|CC)'
 
 for et in sirene_csv:
     if header is None:
@@ -97,6 +100,7 @@ for et in sirene_csv:
         libvoie = re.sub(r'^LIEU(.|)DIT ','',libvoie)
         libvoie = re.sub(r'^ADRESSE INCOMPLETE.*','',libvoie)
         libvoie = re.sub(r'^SANS DOMICILE FIXE','',libvoie)
+        libvoie = re.sub(r'^COMMUNE DE RATTACHEMENT','',libvoie)
 
         # ou de la ligne 4 normalisée
         ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
@@ -255,12 +259,12 @@ for et in sirene_csv:
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 # Centres commerciaux...
-                elif re.match(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)',libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)','\1 Galerie Marchande',libvoie), 'poi':'mall', 'citycode': depcom, 'limit': '1'},'G')
+                elif re.match(ccial,libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': re.sub(ccial,'\1 Galerie Marchande',libvoie), 'poi':'mall', 'citycode': depcom, 'limit': '1'},'G')
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
-                elif re.match(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)',libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(r'(C|CTRE|CENTRE) (CIAL|COMMERC|COMMERCIAL)','\1 Centre Commercial',libvoie), 'citycode': depcom, 'limit': '1'},'G')
+                elif re.match(ccial,libvoie) is not None:
+                    poi = geocode(addok_poi, {'q': re.sub(ccial,'\1 Centre Commercial',libvoie), 'citycode': depcom, 'limit': '1'},'G')
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
                 # Aéroports et aérodromes...
@@ -302,7 +306,7 @@ for et in sirene_csv:
                         ok = ok +1
                     else:
                         stats['municipality']+=1
-                        print(json.dumps({'action':'manque','siren': et[0], 'nic': et[1], 'adr_insee': depcom, 'adr_texte': ligne4G.strip()},sort_keys=True))
+                        print(json.dumps({'action':'manque','siren': et[0], 'nic': et[1], 'adr_comm_insee': depcom, 'adr_texte': ligne4G.strip(), 'adr_norm': ligne4N.strip(),'adr_decl': ligne4D.strip()},sort_keys=True))
                 else:
                     stats['vide']+=1
                     ok = ok +1
