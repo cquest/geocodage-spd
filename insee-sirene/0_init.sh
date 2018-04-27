@@ -55,7 +55,7 @@ grep final -h *.log > AAAA-MM/stats.json
 
 7z a AAAA-MM/logs.7z *.log
 
-rsync "AAAA-MM" root@sc1.cquest.org:/var/www/html/geo_sirene/ -avz --progress
+rsync "AAAA-MM" root@data.cquest.org:/var/www/html/data/geo_sirene/ -avz --progress
 
 # extraction liste des CEDEX, libelles et code INSEE (DEP/COM)
 echo 'cedex,libelle,insee' > cedex.csv; grep CEDEX sirene-mini.csv | csvcut -c 8,23,24 | grep CEDEX | sort -u | grep '^[0-9][0-9][0-9][0-9][0-9]' | sed 's/^\(.....\) /"\1,/;s/,\(...\)$/\1"/;s/,/","/g' >> cedex.csv
