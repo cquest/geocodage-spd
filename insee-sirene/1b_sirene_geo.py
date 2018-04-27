@@ -40,8 +40,20 @@ def trace(txt):
     if False:
         print(txt)
 
-sirene_csv = csv.reader(open(sys.argv[1], 'r'))
-sirene_geo = csv.writer(open('geo-'+sys.argv[1], 'w'))
+if len(sys.argv) > 2:
+    stock = False
+    sirene_csv = csv.reader(open(sys.argv[1], 'r', encoding='iso8859-1'),
+                            delimiter=';')
+    sirene_geo = csv.writer(open(sys.argv[2], 'w'))
+    conn = None
+else:
+    stock = True
+    sirene_csv = csv.reader(open(sys.argv[1], 'r'))
+    sirene_geo = csv.writer(open('geo-'+sys.argv[1], 'w'))
+    conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
+    conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
+    conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
+    conn.execute('DELETE FROM cache_addok WHERE score<0.6')
 
 # chargement de la liste des communes et lat/lon
 communes = csv.DictReader(open('communes-plus-20140630.csv', 'r'))
@@ -53,6 +65,8 @@ for commune in communes:
     commune_latitude.append(round(float(commune['lon_centro']), 6))
     commune_longitude.append(round(float(commune['lat_centro']), 6))
 
+# liste des codes postaux <-> code INSEE
+cp = sqlite3.connect('codes-postaux.sqlite')
 
 header = None
 ok = 0
@@ -62,12 +76,6 @@ numbers = re.compile('(^[0-9]*)')
 stats = {'action': 'progress', 'housenumber': 0, 'interpolation': 0,
          'street': 0, 'locality': 0, 'municipality': 0, 'vide': 0,
          'townhall': 0, 'poi': 0, 'fichier': sys.argv[1]}
-
-
-conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
-conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
-conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
-conn.execute('DELETE FROM cache_addok WHERE score<0.6')
 
 # regexp souvent utilisées
 ccial = r'((C|CTRE|CENTRE|CNTRE|CENT|ESPACE) (CCIAL|CIAL|COM|COMM|COMMERC|COMMERCIAL)|CCR|C\.CIAL|C\.C|CCIAL|CC)'
@@ -83,14 +91,38 @@ for et in sirene_csv:
         sirene_geo.writerow(row)
     else:
         total = total + 1
+        if stock:
+            # géocodage de l'adresse géographique
+            # au cas où numvoie contiendrait autre chose que des chiffres...
+            numvoie = numbers.match(et[16]).group(0)
 
-        # géocodage de l'adresse géographique
-        # au cas où numvoie contiendrait autre chose que des chiffres...
-        numvoie = numbers.match(et[16]).group(0)
-
-        indrep = et[17]
-        typvoie = et[18]
-        libvoie = et[19]
+            indrep = et[17]
+            typvoie = et[18]
+            libvoie = et[19]
+            ligne4N = et[5].strip()
+            ligne4D = et[12].strip()
+            # code INSEE de la commune
+            depcom = '%s%s' % (et[22], et[23])
+        elif len(et) == 18 and header[10] == 'profession':
+            # fichier annuaire CNAM
+            numvoie = ''
+            ind_rep = ''
+            libvoie = ''
+            ligne4N = et[5]
+            ligne4D = ''
+            c = cp.execute('SELECT codecommune from codes_postaux WHERE codePostal = ? and libelleAcheminement = ? LIMIT 1',
+                       (et[7], et[8])).fetchone()
+            depcom = c[0]
+            print(depcom)
+        else:
+            numvoie = numbers.match(et[16]).group(0)
+            indrep = et[17]
+            typvoie = et[18]
+            libvoie = et[19]
+            ligne4N = et[5].strip()
+            ligne4D = et[12].strip()
+            # code INSEE de la commune
+            depcom = '%s%s' % (et[24], et[27])
 
         if numvoie == '' and numbers.match(libvoie).group(0):
             numvoie = numbers.match(libvoie).group(0)
@@ -112,10 +144,7 @@ for et in sirene_csv:
 
         # ou de la ligne 4 normalisée
         ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
-        ligne4N = et[5].strip()
-        ligne4D = et[12].strip()
-        # code INSEE de la commune
-        depcom = '%s%s' % (et[22], et[23])
+
         try:
             cursor = conn.execute('SELECT * FROM cache_addok WHERE adr=?',
                                   ('%s|%s|%s|%s' % (depcom, ligne4G,
@@ -292,20 +321,25 @@ for et in sirene_csv:
 
                 # recherche tout type de POI à partir du type et libellé de voie
                 if source is None:
-                    poi = geocode(addok_poi, {'q': typvoie+' '+libvoie, 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': typvoie+' '+libvoie,
+                                              'citycode': depcom,
+                                              'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.7:
                         source = poi
 
                 if source is not None:
                     if source['properties']['poi'] != 'yes':
                         source['properties']['type'] = source['properties']['type']+'.'+source['properties']['poi']
-                    print(json.dumps({'action': 'poi', 'adr_insee': depcom, 'adr_texte': libvoie, 'poi': source}, sort_keys=True))
+                    print(json.dumps({'action': 'poi', 'adr_insee': depcom,
+                                      'adr_texte': libvoie, 'poi': source},
+                                     sort_keys=True))
 
             if source is not None and score == 0:
                 score = source['properties']['score']
 
             # on conserve le résultat dans le cache sqlite
-            cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)', ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D), marshal.dumps(source), score))
+            if conn:
+                cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)', ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D), marshal.dumps(source), score))
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier
@@ -313,7 +347,8 @@ for et in sirene_csv:
             row = et+['', '', 0, '', '', '', '']
             try:
                 i = commune_insee.index(depcom)
-                row = et+[commune_longitude[i], commune_latitude[i], 0, 'municipality', '', commune_insee[i], '']
+                row = et+[commune_longitude[i], commune_latitude[i], 0,
+                          'municipality', '', commune_insee[i], '']
                 if ligne4G.strip() != '':
                     if typvoie == '' and ['CHEF LIEU', 'CHEF-LIEU',
                                           'LE CHEF LIEU', 'LE CHEF-LIEU',
@@ -355,7 +390,8 @@ for et in sirene_csv:
             stats['geocode_count'] = geocode_count
             stats['efficacite'] = round(100*ok/total, 2)
             print(json.dumps(stats, sort_keys=True))
-            conn.commit()
+            if conn:
+                conn.commit()
 
 stats['geocode_cache'] = cache
 stats['count'] = total
@@ -363,4 +399,5 @@ stats['geocode_count'] = geocode_count
 stats['action'] = 'final'
 stats['efficacite'] = round(100*ok/total, 2)
 print(json.dumps(stats, sort_keys=True))
-conn.commit()
+if conn:
+    conn.commit()
