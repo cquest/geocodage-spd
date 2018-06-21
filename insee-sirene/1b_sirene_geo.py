@@ -59,6 +59,7 @@ def trace(txt):
     if False:
         print(txt)
 
+
 if len(sys.argv) > 2:
     stock = False
     sirene_csv = csv.reader(open(sys.argv[1], 'r', encoding='iso8859-1'),
@@ -70,7 +71,8 @@ else:
     sirene_csv = csv.reader(open(sys.argv[1], 'r'))
     sirene_geo = csv.writer(open('geo-'+sys.argv[1], 'w'))
     conn = sqlite3.connect('cache_geo/cache_addok_'+sys.argv[1]+'.db')
-    conn.execute('CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text, score numeric)')
+    conn.execute('''CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text,
+                 score numeric)''')
     conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')
     conn.execute('DELETE FROM cache_addok WHERE score<0.6')
 
@@ -129,11 +131,16 @@ for et in sirene_csv:
             libvoie = ''
             ligne4N = et[5]
             ligne4D = ''
-            c = cp.execute('SELECT codecommune from codes_postaux WHERE codePostal = ? and libelleAcheminement = ? LIMIT 1',
-                       (et[7], et[8])).fetchone()
+            c = cp.execute('''SELECT codecommune from codes_postaux
+                              WHERE codePostal = ? and libelleAcheminement = ?
+                              LIMIT 1''',
+                           (et[7], et[8])).fetchone()
             depcom = c[0]
             print(depcom)
         else:
+            # fichier SIRENE (stock et quotidien)
+            #  géocodage de l'adresse géographique
+            #  au cas où numvoie contiendrait autre chose que des chiffres...
             numvoie = numbers.match(et[16]).group(0)
             indrep = et[17]
             typvoie = et[18]
@@ -182,26 +189,34 @@ for et in sirene_csv:
             # ou score insuffisant)
             ban = None
             if ligne4G != '':
-                ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom, 'limit': '1'}, 'G')
+                ban = geocode(addok_ban, {'q': ligne4G, 'citycode': depcom,
+                                          'limit': '1'}, 'G')
             if ban is None or ban['properties']['score'] < score_min and ligne4N != ligne4G and ligne4N != '':
-                ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom, 'limit': '1'}, 'N')
+                ban = geocode(addok_ban, {'q': ligne4N, 'citycode': depcom,
+                                          'limit': '1'}, 'N')
                 trace('+ ban  L4N')
             if ban is None or ban['properties']['score'] < score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D != '':
-                ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom, 'limit': '1'}, 'D')
+                ban = geocode(addok_ban, {'q': ligne4D, 'citycode': depcom,
+                                          'limit': '1'}, 'D')
                 trace('+ ban  L4D')
-
 
             # géocodage BANO (ligne4 géo, déclarée ou normalisée si pas trouvé
             # ou score insuffisant)
             bano = None
             if ban is None or ban['properties']['score'] < 0.9:
                 if ligne4G != '':
-                    bano = geocode(addok_bano, {'q': ligne4G, 'citycode': depcom, 'limit': '1'}, 'G')
+                    bano = geocode(addok_bano, {'q': ligne4G,
+                                                'citycode': depcom,
+                                                'limit': '1'}, 'G')
                 if bano is None or bano['properties']['score'] < score_min and ligne4N != ligne4G and ligne4N != '':
-                    bano = geocode(addok_bano, {'q': ligne4N, 'citycode': depcom, 'limit': '1'}, 'N')
+                    bano = geocode(addok_bano, {'q': ligne4N,
+                                                'citycode': depcom,
+                                                'limit': '1'}, 'N')
                     trace('+ bano L4N')
                 if bano is None or bano['properties']['score'] < score_min and ligne4D != ligne4N and ligne4D != ligne4G and ligne4D != '':
-                    bano = geocode(addok_bano, {'q': ligne4D, 'citycode': depcom, 'limit': '1'}, 'D')
+                    bano = geocode(addok_bano, {'q': ligne4D,
+                                                'citycode': depcom,
+                                                'limit': '1'}, 'D')
                     trace('+ bano L4D')
 
             if ban is not None:
@@ -358,7 +373,9 @@ for et in sirene_csv:
 
             # on conserve le résultat dans le cache sqlite
             if conn:
-                cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)', ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D), marshal.dumps(source), score))
+                key = ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D))
+                cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)',
+                                      (key, marshal.dumps(source), score))
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier
