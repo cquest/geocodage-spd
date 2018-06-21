@@ -51,7 +51,7 @@ def geocode(api, params, l4):
         else:
             return(None)
     except:
-        print(json.dumps({'action': 'erreur', 'params': params, 'l4': l4}))
+        print(json.dumps({'action': 'erreur', 'api': api, 'params': params, 'l4': l4}))
         return(None)
 
 
