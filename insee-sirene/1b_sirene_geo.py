@@ -112,19 +112,7 @@ for et in sirene_csv:
         sirene_geo.writerow(row)
     else:
         total = total + 1
-        if stock:
-            # géocodage de l'adresse géographique
-            # au cas où numvoie contiendrait autre chose que des chiffres...
-            numvoie = numbers.match(et[16]).group(0)
-
-            indrep = et[17]
-            typvoie = et[18]
-            libvoie = et[19]
-            ligne4N = et[5].strip()
-            ligne4D = et[12].strip()
-            # code INSEE de la commune
-            depcom = '%s%s' % (et[22], et[23])
-        elif len(et) == 18 and header[10] == 'profession':
+        if len(et) == 18 and header[10] == 'profession':
             # fichier annuaire CNAM
             numvoie = ''
             ind_rep = ''
