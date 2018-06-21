@@ -6,6 +6,7 @@ import json
 import re
 import sqlite3
 import marshal
+from normadresse.normadresse import abrev
 
 score_min = 0.30
 
@@ -28,6 +29,24 @@ def geocode(api, params, l4):
         geocode_count += 1
         if 'features' in j and len(j['features']) > 0:
             j['features'][0]['l4'] = l4
+            j['features'][0]['geo_l4'] = ''
+            j['features'][0]['geo_l5'] = ''
+            if api != addok_poi:
+                # regénération lignes 4 et 5 normalisées
+                name = j['features'][0]['properties']['name']
+                ligne4 = re.sub(r'\(.*\)', '', name).strip()
+                ligne4 = re.sub(r',.*', '', name).strip()
+                ligne5 = ''
+                j['features'][0]['geo_l4'] = abrev(ligne4).upper()
+                if '(' in name:
+                    ligne5 = re.sub(r'.*\((.*)\)', r'\1', name).strip()
+                    j['features'][0]['geo_l5'] = abrev(ligne5).upper()
+                if ',' in name:
+                    ligne5 = re.sub(r'.*,(.*)', r'\1', name).strip()
+                    j['features'][0]['geo_l5'] = abrev(ligne5).upper()
+                # ligne 4 et 5 identiques ? on supprime la 5
+                if j['features'][0]['geo_l5'] == j['features'][0]['geo_l4']:
+                    j['features'][0]['geo_l5'] = ''
             return(j['features'][0])
         else:
             return(None)
@@ -83,11 +102,11 @@ ccial = r'((C|CTRE|CENTRE|CNTRE|CENT|ESPACE) (CCIAL|CIAL|COM|COMM|COMMERC|COMMER
 for et in sirene_csv:
     if header is None:
         header = et+['longitude', 'latitude', 'geo_score', 'geo_type',
-                     'geo_adresse', 'geo_id', 'geo_ligne']
+                     'geo_adresse', 'geo_id', 'geo_ligne', 'geo_l4', 'geo_l5']
         sirene_geo.writerow(header)
     # on ne tente pas le géocodage des adresses hors de France
     elif et[22] == '99':
-        row = et+['', '', 0, '', '', '', '']
+        row = et+['', '', 0, '', '', '', '', '', '']
         sirene_geo.writerow(row)
     else:
         total = total + 1
@@ -344,11 +363,11 @@ for et in sirene_csv:
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier
             # CSV et donc la base sqlite
-            row = et+['', '', 0, '', '', '', '']
+            row = et+['', '', 0, '', '', '', '', '', '']
             try:
                 i = commune_insee.index(depcom)
                 row = et+[commune_longitude[i], commune_latitude[i], 0,
-                          'municipality', '', commune_insee[i], '']
+                          'municipality', '', commune_insee[i], '', '', '']
                 if ligne4G.strip() != '':
                     if typvoie == '' and ['CHEF LIEU', 'CHEF-LIEU',
                                           'LE CHEF LIEU', 'LE CHEF-LIEU',
@@ -383,7 +402,9 @@ for et in sirene_csv:
                                     source['properties']['type'],
                                     source['properties']['label'],
                                     source['properties']['id'],
-                                    source['l4']])
+                                    source['l4'],
+                                    source['geo_l4'],
+                                    source['geo_l5']])
         if total % 1000 == 0:
             stats['geocode_cache'] = cache
             stats['count'] = total
