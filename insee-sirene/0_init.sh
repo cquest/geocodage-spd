@@ -26,7 +26,7 @@ seq 101 120 | sed 's/ /\n/g' | \
 
 # découpage DOM
 seq 1 6 | sed 's/ /\n/g' | \
-    parallel -t csvgrep sirene_97.csv -c COMET -r "{}.*" \> sirene_97{}.csv
+    parallel -t csvgrep sirene_97.csv -c COMET -r "^{}.*" \> sirene_97{}.csv
 
 rm sirene_97.csv
 rm sirene_75.csv
