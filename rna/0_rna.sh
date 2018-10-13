@@ -1,25 +1,27 @@
 t=7
-millesime=20170301_
+millesime=$1
 
 echo "1/$t téléchargement des fichiers"
-wget -nc http://associations.gouv.fr/downloads/rna_waldec_$millesime_.zip
-wget -nc http://associations.gouv.fr/downloads/rna_import_$millesime_.zip
+wget -nc https://media.interieur.gouv.fr/rna/rna_waldec_$millesime.zip
+wget -nc https://media.interieur.gouv.fr/rna/rna_import_$millesime.zip
 
 echo "2/$t décompression"
-unzip rna_waldec_$millesime_.zip
-unzip rna_import_$millesime_.zip
+unzip rna_waldec_$millesime.zip
+unzip rna_import_$millesime.zip
 
 echo "3/$t ISO8859 > UTF8"
-iconv -f 'ISO8859-1' -t 'utf8' rna_waldec_$millesime_.csv > rna_waldec.csv
+iconv -f 'ISO8859-1' -t 'utf8' rna_waldec_$millesime.csv > rna_waldec.csv
+iconv -f 'ISO8859-1' -t 'utf8' rna_import_$millesime.csv > rna_import.csv
 
 echo "4/$t remplacement de \n et \r dans le champ 'objet' et ajout code département"
 time python 1_rna_clean.py rna_waldec.csv
+time python 1_rna_clean.py rna_import.csv
 
 echo "5/$t découpage en fichiers départementaux"
 for d in {00..19} 2A 2B {21..98} {971..978}; do
-  head -n 1 out-rna_waldec.csv > rna_waldec_d$d.csv
+  head -n 1 rna_waldec.csv > temp/rna_waldec_d$d.csv
 done
-time awk -v FPAT='[^,]*|"([^"]|"")*"' '{ print >> "rna_waldec_d"$39".csv"}' out-rna_waldec.csv
+time awk -v FPAT='[^,]*|"([^"]|"")*"' '{ print >> "temp/rna_waldec_d"$39".csv"}' rna_waldec.csv
 
 cat rna_waldec_d0.csv >> rna_waldec_d00.csv
 cat rna_waldec_d.csv >> rna_waldec_d00.csv

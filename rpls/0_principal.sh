@@ -38,7 +38,7 @@ done
 time wc -c rpls_dep*.csv | sort -n -r | grep 'rpls_dep.*.csv' -o | parallel -t python ../1_geocodage_rpls.py  {} \> {}.log
 
 # génération du fichier nationale géocodé
-head -n 1 geo-rpls_01.csv > geo-rpls.csv
+head -n 1 geo-rpls_dep01.csv > geo-rpls.csv
 for f in geo-rpls_*.csv
 do
   tail -n +2 $f >> geo-rpls.csv

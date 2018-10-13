@@ -11,10 +11,19 @@ for et in data_csv:
         header = et+['dep','vide']
         data_geo.writerow(header)
     else:
-        for f in range(0,len(et)):
-            et[f] = et[f].replace('\n',' \\n ',999).replace('\r',' \\r ',999)
-        if et[22][:2]=='97':
-            et = et+[et[22][:3],'']
-        else:
-            et = et+[et[22][:2],'']
-        data_geo.writerow(et)
+        try:
+            for f in range(0,len(et)):
+                et[f] = et[f].replace('\n',' \\n ',999).replace('\r',' \\r ',999)
+            if len(et)==41:
+                if et[22][:2]=='97':
+                    et = et+[et[22][:3],'']
+                else:
+                    et = et+[et[22][:2],'']
+            else:
+                if et[22][:2]=='97':
+                    et = et+[et[22][:3],'']
+                else:
+                    et = et+[et[22][:2],'']
+            data_geo.writerow(et)
+        except:
+            print(et[0],len(et))
