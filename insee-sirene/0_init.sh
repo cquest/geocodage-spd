@@ -1,8 +1,7 @@
 #! /bin/bash
 
 echo "1/5 : Remise en forme du CSV (UTF8, quotes, etc)"
-csvclean $1 -e 'ISO8859-1' -d ';'
-rm -f sirene.csv; mv $(echo $1 | sed 's/.csv/_out.csv/') sirene.csv
+unzip -p $1 | iconv - -f cp1252 -t utf8 | csvformat -d ';' > sirene.csv
 
 #echo "2/5 : Suppression des libellés et dénormalisations du COG"
 #csvcut sirene.csv -v -C RPET,LIBREG,LIBCOM,EPCI,LIBNATETAB,LIBAPET,LIBTEFET,LIBNJ,LIBAPEN,LIBTEFEN,ARRONET,CTONET,DU,UU,TU,ZEMET > sirene-mini.csv
