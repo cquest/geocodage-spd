@@ -77,7 +77,7 @@ if len(sys.argv) > 2:
         conn.execute('''CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text,
                      score numeric)''')
         conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')  # noqa
-        conn.execute('DELETE FROM cache_addok WHERE score<0.6')
+        conn.execute('DELETE FROM cache_addok WHERE score<0.7')
 else:
     stock = True
     sirene_csv = csv.reader(open(sys.argv[1], 'r'))
@@ -86,7 +86,7 @@ else:
     conn.execute('''CREATE TABLE IF NOT EXISTS cache_addok (adr text, geo text,
                  score numeric)''')
     conn.execute('CREATE INDEX IF NOT EXISTS cache_addok_adr ON cache_addok (adr)')  # noqa
-    conn.execute('DELETE FROM cache_addok WHERE score<0.6')
+    conn.execute('DELETE FROM cache_addok WHERE score<0.7')
 
 # chargement de la liste des communes et lat/lon
 communes = csv.DictReader(open('communes-plus-20140630.csv', 'r'))
