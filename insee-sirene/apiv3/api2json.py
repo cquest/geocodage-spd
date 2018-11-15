@@ -24,10 +24,21 @@ else:
     print(access_token)
 
 # paramètres pour cette exécution
-date = sys.argv[1]
 url = 'https://api.insee.fr/entreprises/sirene/V3/siret'
-query = 'dateDernierTraitementEtablissement:'+date
-outfile = date+'-sirene.json.gz'
+if len(sys.argv) > 2:
+    date = sys.argv[1]
+    query = 'dateDernierTraitementEtablissement:[%s TO %s] OR dateDernierTraitementUniteLegale:[%s TO %s]' % (
+        sys.argv[2], date, sys.argv[2], date)
+    outfile = 'data/%s-%s.json.gz' % (sys.argv[2], date)
+else:
+    date = sys.argv[1]
+    query = 'dateDernierTraitementEtablissement:%s OR dateDernierTraitementUniteLegale:%s' % (date, date)
+    outfile = 'data/'+date+'-sirene.json.gz'
+
+if len(sys.argv) > 3:
+    outfile = sys.argv[3]
+
+print(outfile)
 
 # création du fichier de sortie, json compressé gzip
 output = gzip.open(outfile, "wt")
