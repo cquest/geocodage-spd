@@ -222,9 +222,9 @@ for et in sirene_csv:
 
         # code insee inconnu ?
         if depcom != '' and depcom < '97000' and depcom in histo_depcom:
-             depcom = histo_depcom[depcom]['POLE']
-           if libvoie != '':
-                libvoie = libvoie + " "+ histo_depcom[depcom]['NCC']
+            if libvoie != '':
+                libvoie = libvoie + " " + histo_depcom[depcom]['NCC']
+            depcom = histo_depcom[depcom]['POLE']
 
         # ou de la ligne 4 normalisée
         ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
