@@ -5,7 +5,7 @@ mkdir -p communes
 
 # entête des fichiers CSV par commune
 HEAD=$(zcat $1 | head -n 1)
-for i in `zcat $1 | csvcut -c codecommuneetablissement | sort -u | grep '^[0-9]'`; do
+for i in `zcat $1 | csvcut -c codeCommuneEtablissement | sort -u | grep '^[0-9]'`; do
   echo $HEAD > communes/$i.csv;
 done
 
