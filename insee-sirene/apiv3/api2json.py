@@ -18,9 +18,10 @@ token_request = requests.post('https://api.insee.fr/token',
 if token_request.status_code != 200:
     print('ERR', token_request.status_code, token_request.text)
     exit()
-
-t = token_request.json()
-access_token = t['access_token']
+else:
+    t = token_request.json()
+    access_token = t['access_token']
+    print(access_token)
 
 # paramètres pour cette exécution
 date = sys.argv[1]
