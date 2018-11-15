@@ -92,8 +92,8 @@ else:
 communes = csv.DictReader(open('communes-plus-20140630.csv', 'r'))
 commune_insee = {}
 for commune in communes:
-    commune_insee[commune['\ufeffinsee']] = { 'lat': round(float(commune['lon_centro']), 6),
-                                              'lon':round(float(commune['lat_centro']), 6) }
+    commune_insee[commune['\ufeffinsee']] = {'lat': round(float(commune['lon_centro']), 6),
+                                             'lon': round(float(commune['lat_centro']), 6)}
 
 # chargement des changements de codes INSEE
 histo = csv.DictReader(open('histo_depcom.csv', 'r'))
