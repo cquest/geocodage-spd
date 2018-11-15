@@ -52,29 +52,30 @@ maxi = 1
 
 while total < maxi:
     params = {'q': query, 'nombre': nombre, 'curseur': curseur}
-    r = requests.get(url, params=params, headers=headers)
-    if r.status_code == 429:  # throttle !
-        print('throttle...start')
-        time.sleep(1)
-        print('throttle...end')
-    elif r.status_code != 200:
-        print('ERROR:', r.status_code, r.text)
-        time.sleep(1)
-    else:
-        sirets = r.json()
-        if maxi == 1:
-            maxi = int(r.headers['X-Total-Count'])
-        if 'etablissements' in sirets:
-            for siret in sirets['etablissements']:
-                output.write(json.dumps(siret)+'\n')
-            total = total + len(sirets['etablissements'])
-            if 'curseurSuivant' in sirets['header']:
-                curseur = sirets['header']['curseurSuivant']
-                print(round(100*total/int(r.headers['X-Total-Count']), 2),
-                      '%', r.headers['X-Total-Count'])
+    try:
+        r = requests.get(url, params=params, headers=headers)
+        if r.status_code == 429:  # throttle !
+            print('throttle...')
+        elif r.status_code != 200:
+            print('ERROR:', r.status_code, r.text)
+        else:
+            sirets = r.json()
+            if maxi == 1:
+                maxi = int(r.headers['X-Total-Count'])
+            if 'etablissements' in sirets:
+                for siret in sirets['etablissements']:
+                    output.write(json.dumps(siret)+'\n')
+                total = total + len(sirets['etablissements'])
+                if 'curseurSuivant' in sirets['header']:
+                    curseur = sirets['header']['curseurSuivant']
+                    print(round(100*total/int(r.headers['X-Total-Count']), 2),
+                        '%', r.headers['X-Total-Count'])
+                else:
+                    break
             else:
                 break
-        else:
-            break
+    except:
+        pass
+    time.sleep(1)
 
 output.close()
