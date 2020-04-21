@@ -68,7 +68,7 @@ def trace(txt):
 
 if len(sys.argv) > 2:
     stock = False
-    sirene_csv = csv.reader(open(sys.argv[1], 'r', encoding='iso8859-1'),
+    sirene_csv = csv.reader(open(sys.argv[1], 'r', encoding='utf-8'),
                             delimiter=',')
     sirene_geo = csv.writer(gzip.open(sys.argv[2], 'wt', compresslevel=9))
     conn = None
