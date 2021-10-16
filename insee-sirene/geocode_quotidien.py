@@ -298,11 +298,13 @@ for et in sirene_csv:
                 if ligne4G != '':
                     bano = geocode(addok_bano, {'q': ligne4G,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'G')
                 if (bano is None or bano['properties']['score'] < score_min
                    and ligne4N != ligne4G and ligne4N != ''):
                     bano = geocode(addok_bano, {'q': ligne4N,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'N')
                     trace('+ bano L4N')
                 if (bano is None or bano['properties']['score'] < score_min
@@ -310,6 +312,7 @@ for et in sirene_csv:
                    and ligne4D != ''):
                     bano = geocode(addok_bano, {'q': ligne4D,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'D')
                     trace('+ bano L4D')
 
@@ -381,7 +384,8 @@ for et in sirene_csv:
                     trace('+ ban  L4G-indrep')
             if source is None and bano is None and indrep != '':
                 trace('supp. indrep BANO: %s %s %s' % (numvoie, typvoie, libvoie))
-                addok = geocode(addok_bano, {'q': '%s %s %s' % (numvoie, typvoie, libvoie), 'citycode': depcom, 'limit': '1'}, 'G')
+                addok = geocode(addok_bano, {'q': '%s %s %s' % (
+                    numvoie, typvoie, libvoie), 'citycode': depcom, 'type': 'housenumber+street+locality+city', 'limit': '1'}, 'G')
                 if addok is not None and addok['properties']['type'] == 'housenumber' and addok['properties']['score'] > score_min:
                     addok['properties']['type'] = 'interpolation'
                     source = addok
@@ -405,7 +409,8 @@ for et in sirene_csv:
                     source = addok
                     trace('+ ban  L4G-numvoie')
             if source is None and numvoie != '':
-                addok = geocode(addok_bano, {'q': '%s %s' % (typvoie, libvoie), 'citycode': depcom, 'limit': '1'}, 'G')
+                addok = geocode(addok_bano, {'q': '%s %s' % (
+                    typvoie, libvoie), 'citycode': depcom, 'type': 'housenumber+street+locality+city', 'limit': '1'}, 'G')
                 if addok is not None and addok['properties']['type'] == 'street' and addok['properties']['score'] > score_min:
                     source = addok
                     trace('+ bano L4G-numvoie')
