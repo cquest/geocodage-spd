@@ -463,6 +463,7 @@ for et in sirene_csv:
                 # recherche tout type de POI à partir du type et libellé de voie
                 if source is None:
                     poi = geocode(addok_poi, {'q': typvoie+' '+libvoie,
+                                              'type': 'poi',
                                               'citycode': depcom,
                                               'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.7:
