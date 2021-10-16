@@ -227,7 +227,7 @@ for et in sirene_csv:
 
         # typvoie incorrect ou à désabréger pour un score cohérent
         if typvoie in typ_abrege:
-            typvoie == typ_abrege[typvoie]
+            typvoie = typ_abrege[typvoie]
 
         # élimination des LD / LIEU-DIT des libellés
         if typvoie in ['LD', 'HAM']:
