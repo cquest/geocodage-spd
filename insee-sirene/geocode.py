@@ -204,7 +204,7 @@ typ_abrege = {  'PRO': 'PROMENADE',
 
 for et in sirene_csv:
     # on ne tente pas le géocodage des adresses hors de France
-    if et[20] == '' or re.match(r'^(978|98|99)',et[20]):
+    if et[20] == '' or re.match(domcom,et[20]):
         row = et+['', '', 0, '', '', '', '', '', '']
         sirene_geo.writerow(row)
     else:
