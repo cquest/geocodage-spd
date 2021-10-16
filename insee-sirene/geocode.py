@@ -239,10 +239,13 @@ for et in sirene_csv:
         libvoie = re.sub(r'^SANS DOMICILE FIXE', '', libvoie)
         libvoie = re.sub(r'^COMMUNE DE RATTACHEMENT', '', libvoie)
 
+
         # code insee inconnu ?
-        if depcom != '' and depcom < '97000' and depcom in histo_depcom:
-            if libvoie != '':
-                libvoie = libvoie + " " + histo_depcom[depcom]['NCC']
+        if (depcom != '' and depcom < '97000'
+            and depcom in histo_depcom
+            and histo_depcom[depcom] != depcom
+            and histo_depcom[depcom]['POLE'] not in ('13055','75056','69123')):
+            libvoie = libvoie + " " + histo_depcom[depcom]['NCC']
             depcom = histo_depcom[depcom]['POLE']
 
         # ou de la ligne 4 normalisée
