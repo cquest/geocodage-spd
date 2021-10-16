@@ -322,7 +322,10 @@ for et in sirene_csv:
                 bano_score = bano['properties']['score']
                 if bano['properties']['type'] == 'place':
                     bano['properties']['type'] = 'locality'
-                bano['properties']['id'] = 'BANO_'+bano['properties']['id']
+                if 'id' in bano['properties']:
+                    bano['properties']['id'] = 'BANO_'+bano['properties']['id']
+                else:
+                    bano['properties']['id'] = ''
                 if bano['properties']['type'] == 'housenumber':
                     bano['properties']['id'] = '%s_%s' % (bano['properties']['id'],  bano['properties']['housenumber'])
                 bano_type = bano['properties']['type']
