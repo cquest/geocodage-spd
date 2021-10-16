@@ -16,9 +16,9 @@ from normadresse.normadresse import abrev
 score_min = 0.30
 
 # URL à appeler pour géocodage BAN, BANO et POI OSM
-addok_ban = 'http://localhost:7979/search/'
-addok_bano = 'http://localhost:7878/search'
-addok_poi = 'http://localhost:7777/search'
+addok_ban = 'http://192.168.0.103/search/'
+addok_bano = 'http://192.168.0.132/search'
+addok_poi = 'http://192.168.0.132/search'
 
 geocode_count = 0
 
