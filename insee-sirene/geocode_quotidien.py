@@ -429,12 +429,14 @@ for et in sirene_csv:
             if source is None:
                 # Mairies et Hôtels de Ville...
                 if ['MAIRIE','LA MAIRIE','HOTEL DE VILLE'].count(libvoie) > 0:
-                    poi = geocode(addok_poi, {'q': 'hotel de ville', 'poi': 'townhall', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': 'hotel de ville', 
+                                              'poi': 'townhall', 'citycode': depcom, 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 # Gares...
                 elif ['GARE', 'GARE SNCF', 'LA GARE'].count(libvoie) > 0:
-                    poi = geocode(addok_poi, {'q': 'gare', 'poi': 'station', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {
+                                  'q': 'gare', 'poi': 'station', 'citycode': depcom, 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 # Centres commerciaux...
@@ -443,7 +445,8 @@ for et in sirene_csv:
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
                 elif re.match(ccial,libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(ccial, '\1 Centre Commercial', libvoie), 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': re.sub(
+                        ccial, '\1 Centre Commercial', libvoie), 'type': 'poi',  'citycode': depcom, 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
                 # Aéroports et aérodromes...
