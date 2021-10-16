@@ -16,9 +16,9 @@ from normadresse.normadresse import abrev
 score_min = 0.30
 
 # URL à appeler pour géocodage BAN, BANO et POI OSM
-addok_ban  = 'http://192.168.0.103/search'
-addok_bano = 'http://192.168.0.133/search'
-addok_poi  = 'http://192.168.0.132/search'
+addok_ban = 'http://localhost:7979/search/'
+addok_bano = 'http://localhost:7878/search'
+addok_poi = 'http://localhost:7777/search'
 
 geocode_count = 0
 
@@ -68,8 +68,7 @@ def trace(txt):
 
 if len(sys.argv) > 2:
     stock = False
-    sirene_csv = csv.reader(open(sys.argv[1], 'r', encoding='iso8859-1'),
-                            delimiter=',')
+    sirene_csv = csv.reader(gzip.open(sys.argv[1], 'rt'), delimiter=',')
     sirene_geo = csv.writer(gzip.open(sys.argv[2], 'wt', compresslevel=9))
     conn = None
     if len(sys.argv) > 3:
@@ -126,9 +125,38 @@ header = ['siren',
           'activitePrincipaleRegistreMetiersEtablissement',
           'dateDernierTraitementEtablissement',
           'etablissementSiege',
-          'nombrePeriodesEtablissement',
+          'etatAdministratifUniteLegale',
+          'statutDiffusionUniteLegale',
+          'unitePurgeeUniteLegale',
+          'dateCreationUniteLegale',
+          'categorieJuridiqueUniteLegale',
+          'denominationUniteLegale',
+          'sigleUniteLegale',
+          'denominationUsuelle1UniteLegale',
+          'denominationUsuelle2UniteLegale',
+          'denominationUsuelle3UniteLegale',
+          'sexeUniteLegale',
+          'nomUniteLegale',
+          'nomUsageUniteLegale',
+          'prenom1UniteLegale',
+          'prenom2UniteLegale',
+          'prenom3UniteLegale',
+          'prenom4UniteLegale',
+          'prenomUsuelUniteLegale',
+          'pseudonymeUniteLegale',
+          'activitePrincipaleUniteLegale',
+          'nomenclatureActivitePrincipaleUniteLegale',
+          'identifiantAssociationUniteLegale',
+          'economieSocialeSolidaireUniteLegale',
+          'caractereEmployeurUniteLegale',
+          'trancheEffectifsUniteLegale',
+          'anneeEffectifsUniteLegale',
+          'nicSiegeUniteLegale',
+          'dateDernierTraitementUniteLegale',
+          'categorieEntreprise',
+          'anneeCategorieEntreprise',
           'complementAdresseEtablissement',
-          'numeroVoieEtablissement',
+          'numeroVoieEtablissement', # 41
           'indiceRepetitionEtablissement',
           'typeVoieEtablissement',
           'libelleVoieEtablissement',
@@ -155,7 +183,6 @@ header = ['siren',
           'libelleCedex2Etablissement',
           'codePaysEtranger2Etablissement',
           'libellePaysEtranger2Etablissement',
-          'dateDebut',
           'etatAdministratifEtablissement',
           'enseigne1Etablissement',
           'enseigne2Etablissement',
@@ -177,8 +204,10 @@ header = ['siren',
 sirene_geo.writerow(header)
 
 for et in sirene_csv:
+    if et[0] == 'siren':
+        continue
     # on ne tente pas le géocodage des adresses hors de France
-    if et[20] == '' or re.match(r'^(978|98|99)',et[20]):
+    if et[49] == '' or re.match(r'^(978|98|99)',et[49]):
         row = et+['', '', 0, '', '', '', '', '', '']
         sirene_geo.writerow(row)
     else:
@@ -186,14 +215,14 @@ for et in sirene_csv:
         # fichier SIRENE (stock et quotidien)
         #  géocodage de l'adresse géographique
         #  au cas où numvoie contiendrait autre chose que des chiffres...
-        numvoie = numbers.match(et[12]).group(0)
-        indrep = et[13]
-        typvoie = et[14]
-        libvoie = et[15]
+        numvoie = numbers.match(et[41]).group(0)
+        indrep = et[42]
+        typvoie = et[43]
+        libvoie = et[44]
         ligne4N = ''
         ligne4D = ''
         # code INSEE de la commune
-        depcom = et[20]
+        depcom = et[49]
 
         if numvoie == '' and numbers.match(libvoie).group(0):
             numvoie = numbers.match(libvoie).group(0)
@@ -214,6 +243,7 @@ for et in sirene_csv:
         if typvoie in ['LD', 'HAM']:
             typvoie = ''
         libvoie = re.sub(r'^PRO ', 'PROMENADE ', libvoie)
+        libvoie = re.sub(r'^STAT\. ', 'STATION ', libvoie)
         libvoie = re.sub(r'^(LD|HAM|HAMMEAU) ', '', libvoie)
         libvoie = re.sub(r'^LIEU(.|)DIT ', '', libvoie)
         libvoie = re.sub(r'^ADRESSE INCOMPLETE.*', '', libvoie)
@@ -228,8 +258,6 @@ for et in sirene_csv:
 
         # ou de la ligne 4 normalisée
         ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
-        if et[11] != '':
-            ligne4D = ('%s%s %s %s %s' % (numvoie, indrep, typvoie, libvoie, et[11])).strip()
 
         try:
             cursor = conn.execute('SELECT * FROM cache_addok WHERE adr=?',
