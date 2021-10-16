@@ -292,11 +292,13 @@ for et in sirene_csv:
                 if ligne4G != '':
                     bano = geocode(addok_bano, {'q': ligne4G,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'G')
                 if (bano is None or bano['properties']['score'] < score_min
                    and ligne4N != ligne4G and ligne4N != ''):
                     bano = geocode(addok_bano, {'q': ligne4N,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'N')
                     trace('+ bano L4N')
                 if (bano is None or bano['properties']['score'] < score_min
@@ -304,6 +306,7 @@ for et in sirene_csv:
                    and ligne4D != ''):
                     bano = geocode(addok_bano, {'q': ligne4D,
                                                 'citycode': depcom,
+                                                'type': 'housenumber+street+locality+city',
                                                 'limit': '1'}, 'D')
                     trace('+ bano L4D')
 
