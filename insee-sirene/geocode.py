@@ -120,7 +120,8 @@ score_count = 0
 score_variance = 0
 
 # regexp souvent utilisées
-ccial = r'((C|CTRE|CENTRE|CNTRE|CENT|ESPACE) (CCIAL|CIAL|COM|COMM|COMMERC|COMMERCIAL)|CCR|C\.CIAL|C\.C|CCIAL|CC)'  # noqa
+ccial = re.compile(r'((C|CTRE|CENTRE|CNTRE|CENT|ESPACE) (CCIAL|CIAL|COM|COMM|COMMERC|COMMERCIAL)|CCR|C\.CIAL|C\.C|CCIAL|CC)')  # noqa
+domcom = re.compile(r'^(978|98|99)')
 
 header = ['siren',
           'nic',
