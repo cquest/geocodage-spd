@@ -183,6 +183,25 @@ header = ['siren',
 
 sirene_geo.writerow(header)
 
+typ_abrege = {  'PRO': 'PROMENADE',
+                'AV': 'AVENUE',
+                'ALL': 'ALLEE',
+                'BD': 'BOULEVARD',
+                'PL': 'PLACE',
+                'CHE': 'CHEMIN',
+                'CAR': 'CARREFOUR',
+                'PAS': 'PASSAGE',
+                'RTE': 'ROUTE',
+                'CRS': 'COURS',
+                'SQ': 'SQUARE',
+                'FG': 'FAUBOURG',
+                'GR': 'GRANDE RUE',
+                'MTE': 'MONTEE',
+                'VLA': 'VILLA',
+                'RLE': 'RUELLE',
+                'RPT': 'ROND POINT',
+                'IMP': 'IMPASSE'}
+
 for et in sirene_csv:
     # on ne tente pas le géocodage des adresses hors de France
     if et[20] == '' or re.match(r'^(978|98|99)',et[20]):
@@ -207,13 +226,6 @@ for et in sirene_csv:
             libvoie = libvoie[len(numvoie):]
 
         # typvoie incorrect ou à désabréger pour un score cohérent
-        typ_abrege = {'PRO': 'PROMENADE',
-                      'AV': 'AVENUE',
-                      'BD': 'BOULEVARD',
-                      'PL': 'PLACE',
-                      'CAR': 'CARREFOUR',
-                      'PAS': 'PASSAGE',
-                      'IMP': 'IMPASSE'}
         if typvoie in typ_abrege:
             typvoie == typ_abrege[typvoie]
 
