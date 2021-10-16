@@ -424,37 +424,46 @@ for et in sirene_csv:
             if source is None:
                 # Mairies et Hôtels de Ville...
                 if ['MAIRIE','LA MAIRIE','HOTEL DE VILLE'].count(libvoie) > 0:
-                    poi = geocode(addok_poi, {'q': 'hotel de ville', 'poi': 'townhall', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': 'hotel de ville',
+                                              'poi': 'townhall',
+                                              'citycode': depcom,
+                                              'type': 'poi',
+                                              'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 # Gares...
                 elif ['GARE', 'GARE SNCF', 'LA GARE'].count(libvoie) > 0:
-                    poi = geocode(addok_poi, {'q': 'gare', 'poi': 'station', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {
+                                  'q': 'gare', 'poi': 'station', 'citycode': depcom, 'type': 'poi', 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 # Centres commerciaux...
                 elif re.match(ccial, libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(ccial, '\1 Galerie Marchande', libvoie), 'poi': 'mall', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': re.sub(ccial, '\1 Galerie Marchande', libvoie),
+                                              'poi': 'mall', 'citycode': depcom, 'type': 'poi', 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
                 elif re.match(ccial,libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(ccial, '\1 Centre Commercial', libvoie), 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': re.sub(
+                        ccial, '\1 Centre Commercial', libvoie), 'citycode': depcom, 'type': 'poi', 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.5:
                         source = poi
                 # Aéroports et aérodromes...
                 elif re.match(r'(AEROPORT|AERODROME)', libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': libvoie, 'poi': 'aerodrome', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {
+                                  'q': libvoie, 'poi': 'aerodrome', 'citycode': depcom, 'type': 'poi', 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
                 elif re.match(r'(AEROGARE|TERMINAL)', libvoie) is not None:
-                    poi = geocode(addok_poi, {'q': re.sub(r'(AEROGARE|TERMINAL)', '', libvoie)+' terminal', 'poi': 'terminal', 'citycode': depcom, 'limit': '1'}, 'G')
+                    poi = geocode(addok_poi, {'q': re.sub(r'(AEROGARE|TERMINAL)', '', libvoie)+' terminal',
+                                              'poi': 'terminal', 'citycode': depcom, 'type': 'poi', 'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
 
                 # recherche tout type de POI à partir du type et libellé de voie
                 if source is None:
                     poi = geocode(addok_poi, {'q': typvoie+' '+libvoie,
-                                              'citycode': depcom,
+                                              'citycode': depcom, 'type': 'poi',
                                               'limit': '1'}, 'G')
                     if poi is not None and poi['properties']['score'] > 0.7:
                         source = poi
