@@ -204,6 +204,7 @@ header = ['siren',
 sirene_geo.writerow(header)
 
 for et in sirene_csv:
+    # on saute les lignes d'entête du fichier source
     if et[0] == 'siren':
         continue
     # on ne tente pas le géocodage des adresses hors de France
