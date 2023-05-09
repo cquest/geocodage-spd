@@ -20,6 +20,12 @@ addok_ban  = 'http://192.168.0.103/search'
 addok_bano = 'http://192.168.0.133/search'
 addok_poi  = 'http://192.168.0.132/search'
 
+# sessions pour le keepalive avec les API de géocodage
+keepalive = {
+    addok_ban: requests.Session(),
+    addok_bano: requests.Session(),
+    addok_poi: requests.Session()
+}
 geocode_count = 0
 
 
@@ -29,7 +35,7 @@ def geocode(api, params, l4):
     params['q'] = params['q'].strip()
     if params['q'] != '':
         try:
-            r = requests.get(api, params)
+            r = keepalive[api].get(api, params=params)
             j = json.loads(r.text)
             global geocode_count
             geocode_count += 1
