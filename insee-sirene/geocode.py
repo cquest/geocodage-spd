@@ -268,8 +268,19 @@ for et in sirene_csv:
             g = None
         if g is not None:
             source = marshal.loads(g[1])
-            cache = cache+1
-        else:
+            # détection et supression données invalides dans le cache (citycode != depcom)
+            if source['properties']['citycode'] != depcom:
+                trace('BAD CACHE: %s / %s' %
+                      (depcom, source['properties']['citycode']), True)
+                trace(source,True)
+                conn.execute('DELETE FROM cache_addok WHERE adr=?',
+                             ('%s|%s|%s|%s' % (depcom, ligne4G,
+                                               ligne4N, ligne4D), ))
+                g = None
+            else:
+                cache = cache+1
+
+        if g is None:
 
             trace('%s / %s / %s' % (ligne4G, ligne4D, ligne4N))
 
@@ -484,11 +495,12 @@ for et in sirene_csv:
             if source is not None and score == 0:
                 score = source['properties']['score']
 
-            # on conserve le résultat dans le cache sqlite
-            if conn:
-                key = ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D))
-                cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)',
-                                      (key, marshal.dumps(source), score))
+            # on conserve le résultat dans le cache sqlite si c'est une adresse
+            if conn and source:
+                if 'properties' not in source or 'poi' not in source['properties']['type']:
+                    key = ('%s|%s|%s|%s' % (depcom, ligne4G, ligne4N, ligne4D))
+                    cursor = conn.execute('INSERT INTO cache_addok VALUES (?,?,?)',
+                                        (key, marshal.dumps(source), score))
 
         if source is None:
             # attention latitude et longitude sont inversées dans le fichier
