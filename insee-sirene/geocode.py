@@ -227,6 +227,9 @@ for et in sirene_csv:
         # code INSEE de la commune
         depcom = et[20]
 
+        complement = et[11]
+        enseigne = et[41]
+
         if numvoie == '' and numbers.match(libvoie).group(0):
             numvoie = numbers.match(libvoie).group(0)
             libvoie = libvoie[len(numvoie):]
@@ -257,7 +260,7 @@ for et in sirene_csv:
         # ou de la ligne 4 normalisée
         ligne4G = ('%s%s %s %s' % (numvoie, indrep, typvoie, libvoie)).strip()
         if et[11] != '':
-            ligne4D = ('%s%s %s %s %s' % (numvoie, indrep, typvoie, libvoie, et[11])).strip()
+            ligne4D = ('%s%s %s %s %s' % (numvoie, indrep, typvoie, libvoie, complement)).strip()
 
         try:
             cursor = conn.execute('SELECT * FROM cache_addok WHERE adr=?',
@@ -477,6 +480,14 @@ for et in sirene_csv:
                     if poi is not None and poi['properties']['score'] > score_min:
                         source = poi
 
+                # recherche tout type de POI à partir du nom de l'établissement (enseigne1etablissement)
+                if source is None and enseigne != '':
+                    poi = geocode(addok_poi, {'q': enseigne,
+                                              'citycode': depcom, 'type': 'poi',
+                                              'limit': '1'}, 'P')
+                    if poi is not None and poi['properties']['score'] > 0.8:
+                        source = poi
+
                 # recherche tout type de POI à partir du type et libellé de voie
                 if source is None:
                     poi = geocode(addok_poi, {'q': typvoie+' '+libvoie,
@@ -521,11 +532,10 @@ for et in sirene_csv:
                     else:
                         stats['municipality'] += 1
                         print(json.dumps({'action': 'manque',
-                                          'siret': et[0]+et[1],
+                                          'siret': et[2],
                                           'adr_comm_insee': depcom,
                                           'adr_texte': ligne4G.strip(),
-                                          'adr_norm': ligne4N.strip(),
-                                          'adr_decl': ligne4D.strip()},
+                                          'adr_compl': complement},
                                          sort_keys=True))
                 else:
                     stats['vide'] += 1
