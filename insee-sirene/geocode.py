@@ -73,8 +73,8 @@ def geocode(api, params, l4):
     return(None)
 
 
-def trace(txt):
-    if False:
+def trace(txt, force=False):
+    if force:
         print(txt)
 
 
