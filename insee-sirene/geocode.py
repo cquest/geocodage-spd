@@ -13,7 +13,7 @@ import marshal
 # modules locaux
 from normadresse.normadresse import abrev
 
-score_min = 0.30
+score_min = 0.50
 
 # URL à appeler pour géocodage BAN, BANO et POI OSM
 addok_ban  = 'http://192.168.0.103/search'
